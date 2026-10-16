@@ -2,7 +2,8 @@ import "./styles.css";
 import { getAppConfig, hasSupabaseConfig } from "./config/app-config";
 import { loadUserContext, signOut, type UserContext } from "./auth/auth-service";
 import { canAccessModule } from "./auth/permissions";
-import { getCurrentRoute, loadRouteContent, navigateTo, ROUTES, type RouteKey } from "./router";
+import { getCurrentRoute, getFaithfulIdFromRoute, loadRouteContent, navigateTo, ROUTES, type RouteKey } from "./router";
+import { mountFaithfulList, mountFaithfulProfile } from "./features/fideles/fideles-ui";
 import { renderLoginScreen, renderSetupScreen } from "./ui/auth-screens";
 import { mountSettingsPage } from "./ui/settings";
 import { registerSW } from "virtual:pwa-register";
@@ -146,6 +147,7 @@ function renderApplication(context: UserContext): void {
   async function renderRoute(): Promise<void> {
     const sequence = ++renderSequence;
     const route = getCurrentRoute();
+    const faithfulId = route === "fideles" ? getFaithfulIdFromRoute() : null;
     updateActiveLink(route);
     closeMenu();
 
@@ -159,12 +161,16 @@ function renderApplication(context: UserContext): void {
     }
 
     try {
-      const markup = await loadRouteContent(route);
+      const markup = await loadRouteContent(route, faithfulId);
       if (sequence !== renderSequence) return;
       content.innerHTML = markup;
-      document.title = `${ROUTES[route].label} — Enoria`;
+      document.title = faithfulId ? "Fiche fidèle — Enoria" : `${ROUTES[route].label} — Enoria`;
       if (route === "parametres") {
         mountSettingsPage(content, context, () => window.location.reload());
+      } else if (route === "fideles" && faithfulId) {
+        void mountFaithfulProfile(content, context, faithfulId);
+      } else if (route === "fideles") {
+        mountFaithfulList(content);
       }
       window.scrollTo({ top: 0, behavior: "auto" });
     } catch {
