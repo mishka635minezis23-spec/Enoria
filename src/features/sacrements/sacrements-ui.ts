@@ -93,7 +93,7 @@ export function mountSacramentsPage(container: HTMLElement): void {
   });
   container.addEventListener("click",(event)=>{
     const button=(event.target as HTMLElement).closest<HTMLButtonElement>("[data-open-sacrament-fidele]");
-    if(button?.dataset.openSacramentFidele) navigateToFaithful(button.dataset.openSacramentFidele);
+    if(button?.dataset.openSacramentFidele) navigateToFaithful(button.dataset.openSacramentFidele, "sacrements");
   });
   void load();
 }
