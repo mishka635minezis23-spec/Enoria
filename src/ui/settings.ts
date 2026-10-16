@@ -45,7 +45,7 @@ export function mountSettingsPage(
         <p id="settings-error" class="hidden rounded-lg bg-rose-50 p-3 text-sm text-rose-700" role="alert"></p>
         <p id="settings-success" class="hidden rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800" role="status"></p>
         <div class="flex flex-wrap items-center justify-end gap-3">
-          <button type="submit" id="settings-save" class="rounded-lg bg-[#176653] px-4 py-2.5 text-sm font-semibold text-white">Enregistrer les paramètres</button>
+          <button type="submit" id="settings-save" class="rounded-lg bg-[var(--enoria-green)] px-4 py-2.5 text-sm font-semibold text-white">Enregistrer les paramètres</button>
         </div>
       </form>
       <article class="page-card border border-amber-200 bg-amber-50 p-5">
@@ -76,6 +76,13 @@ export function mountSettingsPage(
     button.disabled = true;
     button.textContent = "Enregistrement…";
 
+    if (url.value.trim() !== config.supabase.url && !key.value.trim()) {
+      errorNode.textContent = "Si tu changes de projet Supabase, saisis aussi la nouvelle clé publique.";
+      errorNode.classList.remove("hidden");
+      button.disabled = false;
+      button.textContent = "Enregistrer les paramètres";
+      return;
+    }
     const newKey = key.value.trim() || config.supabase.publishableKey;
     const connectionChanged = url.value.trim() !== config.supabase.url || newKey !== config.supabase.publishableKey;
     try {
