@@ -406,10 +406,108 @@ export async function mountFaithfulProfile(
           const marriageHtml = (marriageResult.error ? [] : marriageResult.data ?? []).map((item) => `
             <article class="rounded-xl border border-slate-100 p-4"><h3 class="font-semibold text-slate-800">Événement matrimonial : ${escapeHtml(item.type)}</h3><p class="mt-2 text-xs text-slate-500">${formatPartialDate(item.jour, item.mois, item.annee, item.precision)} · ${escapeHtml(item.lieu ?? "Lieu non renseigné")}</p><p class="mt-1 text-xs text-slate-500">Conjoint : ${escapeHtml(item.conjoint_nom ?? "—")} · Acte ${escapeHtml(item.numero_acte ?? "—")} · Page ${escapeHtml(item.page_registre ?? "—")}</p></article>`).join("");
           const mentionsHtml = (mentionResult.error ? [] : mentionResult.data ?? []).map((item) => `<li class="flex justify-between gap-3 py-2 text-xs"><span>${escapeHtml(item.type_mention)}</span><span class="text-slate-500">${escapeHtml(item.statut)}</span></li>`).join("");
+          const canWrite = context.roles.some((role) => role === "secretaire" || role === "cure");
+          let editorHtml = "";
+          if (canWrite) {
+            const [yearsResult, communitiesResult] = await Promise.all([
+              supabase.from("annees_pastorales").select("id,libelle,date_debut,active").eq("paroisse_id",faithful.paroisse_id).order("date_debut",{ascending:false}),
+              supabase.from("communautes").select("id,nom").eq("paroisse_id",faithful.paroisse_id).order("nom")
+            ]);
+            if (yearsResult.error) throw yearsResult.error;
+            if (communitiesResult.error) throw communitiesResult.error;
+            const availableTypes = (["eucharistie","confirmation"] as const).filter((type) =>
+              !(sacramentResult.data ?? []).some((item) => item.type === type)
+            );
+            const yearOptions = yearsResult.data.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.libelle)}</option>`).join("");
+            const communityOptions = communitiesResult.data.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.nom)}</option>`).join("");
+            const defaultYear = yearsResult.data.find((item) => item.id === activeYear?.id)?.id ?? yearsResult.data.find((item) => item.active)?.id ?? yearsResult.data[0]?.id ?? "";
+            const defaultCommunity = communitiesResult.data.some((item) => item.id === faithful.communaute_id) ? faithful.communaute_id : communitiesResult.data[0]?.id ?? "";
+            editorHtml = `
+              <section class="page-card p-5">
+                <h2 class="font-semibold text-slate-800">Ajouter un sacrement</h2>
+                <p class="mt-1 text-xs leading-5 text-slate-500">Réservé à la secrétaire et au curé. Le numéro d'acte et la page du registre sont obligatoires.</p>
+                ${availableTypes.length && yearOptions && communityOptions ? `
+                  <form id="add-sacrament-form" class="mt-4 space-y-4">
+                    <div class="grid gap-3 sm:grid-cols-3">
+                      <label class="text-xs font-medium text-slate-600">Sacrement<select name="type" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm">${availableTypes.map((type)=>`<option value="${type}">${type==="eucharistie"?"Eucharistie":"Confirmation"}</option>`).join("")}</select></label>
+                      <label class="text-xs font-medium text-slate-600">Année pastorale<select name="annee" required class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm">${yearOptions}</select></label>
+                      <label class="text-xs font-medium text-slate-600">Communauté de célébration<select name="communaute" required class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm">${communityOptions}</select></label>
+                    </div>
+                    ${partialDateFields("sacrament")}
+                    <div class="grid gap-3 sm:grid-cols-2">
+                      <label class="text-xs font-medium text-slate-600">Numéro d'acte<input name="numero_acte" required maxlength="80" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" /></label>
+                      <label class="text-xs font-medium text-slate-600">Page du registre<input name="page_registre" required maxlength="80" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" /></label>
+                      <label class="text-xs font-medium text-slate-600">Lieu<input name="lieu" maxlength="160" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" /></label>
+                      <label class="text-xs font-medium text-slate-600">Ministre<input name="ministre" maxlength="160" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" /></label>
+                    </div>
+                    <p id="add-sacrament-feedback" class="hidden rounded-lg p-3 text-sm" role="status"></p>
+                    <button type="submit" class="rounded-lg bg-[var(--enoria-green)] px-4 py-2.5 text-sm font-semibold text-white">Enregistrer le sacrement</button>
+                  </form>` : '<p class="mt-3 text-sm text-slate-500">Aucun type de sacrement disponible ou aucune année/communauté accessible.</p>'}
+              </section>
+              <section class="page-card p-5">
+                <h2 class="font-semibold text-slate-800">Carte de baptême et mariage</h2>
+                <div class="mt-3 flex flex-wrap items-center justify-between gap-3"><p class="max-w-2xl text-xs leading-5 text-slate-500">La modification de la carte de baptême attend une opération atomique côté base. L'ajout des événements matrimoniaux attend une contrainte obligatoire sur l'acte et la page du registre.</p><button type="button" disabled class="cursor-not-allowed rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-400">Modifier la carte de baptême</button></div>
+              </section>`;
+          } else {
+            editorHtml = '<section class="page-card p-5 text-sm text-slate-500">Consultation seule : l’ajout et la modification des sacrements sont réservés à la secrétaire et au curé.</section>';
+          }
           contentEl.innerHTML = `
             <div class="space-y-4"><section class="page-card p-5"><h2 class="font-semibold text-slate-800">Sacrements</h2><div class="mt-4 space-y-3">${sacramentsHtml || '<p class="text-sm text-slate-400">Aucun sacrement lisible pour ce dossier.</p>'}</div></section>
             <section class="page-card p-5"><h2 class="font-semibold text-slate-800">Événements matrimoniaux</h2><div class="mt-4 space-y-3">${marriageHtml || '<p class="text-sm text-slate-400">Aucun événement matrimonial lisible.</p>'}</div></section>
-            <section class="page-card p-5"><h2 class="font-semibold text-slate-800">Mentions du livret</h2><ul class="mt-3 divide-y divide-slate-100">${mentionsHtml || '<li class="py-2 text-sm text-slate-400">Aucune mention enregistrée.</li>'}</ul></section></div>`;
+            <section class="page-card p-5"><h2 class="font-semibold text-slate-800">Mentions du livret</h2><ul class="mt-3 divide-y divide-slate-100">${mentionsHtml || '<li class="py-2 text-sm text-slate-400">Aucune mention enregistrée.</li>'}</ul></section>
+            ${editorHtml}</div>`;
+
+          const addForm = contentEl.querySelector<HTMLFormElement>("#add-sacrament-form");
+          if (addForm) {
+            bindPartialDate(addForm,"sacrament");
+            const yearSelect = addForm.querySelector<HTMLSelectElement>('select[name="annee"]')!;
+            const communitySelect = addForm.querySelector<HTMLSelectElement>('select[name="communaute"]')!;
+            const yearOptionsData = yearsResult.data;
+            const communityOptionsData = communitiesResult.data;
+            yearSelect.value = yearOptionsData.some((item)=>item.id===activeYear?.id) ? activeYear!.id : yearOptionsData.find((item)=>item.active)?.id ?? yearOptionsData[0].id;
+            communitySelect.value = communityOptionsData.some((item)=>item.id===faithful.communaute_id) ? faithful.communaute_id : communityOptionsData[0].id;
+            addForm.addEventListener("submit",async(event)=>{
+              event.preventDefault();
+              const formFeedback=addForm.querySelector<HTMLElement>("#add-sacrament-feedback")!;
+              const button=addForm.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+              const values=new FormData(addForm);
+              button.disabled=true;
+              button.textContent="Enregistrement…";
+              try {
+                const date=collectPartialDate(addForm,"sacrament");
+                const act=String(values.get("numero_acte")??"").trim();
+                const page=String(values.get("page_registre")??"").trim();
+                if(!act||!page)throw new Error("Le numéro d'acte et la page du registre sont obligatoires.");
+                const selectedType=String(values.get("type"));
+                if(selectedType!=="eucharistie"&&selectedType!=="confirmation")throw new Error("Type de sacrement invalide.");
+                const {error:insertError}=await supabase.from("sacrements").insert({
+                  fidele_id:faithful.id,
+                  paroisse_id:faithful.paroisse_id,
+                  type:selectedType,
+                  annee_pastorale_id:String(values.get("annee")),
+                  communaute_historique_id:String(values.get("communaute")),
+                  jour:date.jour,
+                  mois:date.mois,
+                  annee:date.annee,
+                  precision:date.precision,
+                  lieu:String(values.get("lieu")??"").trim()||null,
+                  numero_acte:act,
+                  page_registre:page,
+                  reference_registre_requise:true,
+                  ministre:String(values.get("ministre")??"").trim()||null
+                });
+                if(insertError)throw insertError;
+                formFeedback.textContent="Sacrement enregistré dans le registre numérique.";
+                formFeedback.className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800";
+                await renderTab("sacrements");
+              } catch(error) {
+                formFeedback.textContent=error instanceof Error?error.message:"Enregistrement impossible.";
+                formFeedback.className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700";
+                button.disabled=false;
+                button.textContent="Enregistrer le sacrement";
+              }
+            });
+          }
           return;
         }
 
