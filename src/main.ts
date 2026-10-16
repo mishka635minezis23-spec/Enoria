@@ -87,11 +87,22 @@ function renderApplication(context: UserContext, activePastoralYear: ActivePasto
   const rolesLabel = context.roles.map((role) => roleLabels[role] ?? role).join(" · ");
   const initials = context.displayName.trim().charAt(0).toLocaleUpperCase("fr-CD") || "U";
 
+  const navIcons: Record<RouteKey, string> = {
+    dashboard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/><rect x="13" y="10" width="8" height="11" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/></svg>',
+    organisation: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-8h6v8"/></svg>',
+    fideles: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-3.5 2.7-5.5 6.5-5.5 2.1 0 3.8.7 4.9 2M16 8h6m-3-3v6"/></svg>',
+    sacrements: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M6 8h12M8 22h8"/></svg>',
+    dimes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5c-.7-.7-1.7-1-3-1-1.6 0-2.7.8-2.7 2s1 1.8 2.7 2.2 2.7 1 2.7 2.2-1.1 2-2.8 2c-1.2 0-2.4-.4-3.2-1.2M12.5 5.5v13"/></svg>',
+    rapports: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM14 3v5h5M8 13h8M8 17h8"/></svg>',
+    statistiques: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 20h18M6 16V9m6 7V4m6 12v-5"/></svg>',
+    parametres: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 13.5a7 7 0 0 0 0-3l2-1.5-2-3.5-2.3.8a7 7 0 0 0-2.6-1.5L13.7 2h-3.4l-.4 2.8a7 7 0 0 0-2.6 1.5L5 5.5 3 9l2 1.5a7 7 0 0 0 0 3L3 15l2 3.5 2.3-.8a7 7 0 0 0 2.6 1.5l.4 2.8h3.4l.4-2.8a7 7 0 0 0 2.6-1.5l2.3.8 2-3.5z"/></svg>'
+  };
+
   const navItems = (Object.entries(ROUTES) as [RouteKey, (typeof ROUTES)[RouteKey]][])
     .filter(([key]) => canAccessModule(context.roles, key))
     .map(([key, item]) => `
       <a class="sidebar-link" href="#/${key}" data-route="${key}">
-        <span class="nav-icon" aria-hidden="true">${item.icon}</span><span>${item.label}</span>
+        <span class="nav-icon" aria-hidden="true">${navIcons[key]}</span><span>${item.label}</span>
       </a>`)
     .join("");
 
