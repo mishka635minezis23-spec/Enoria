@@ -153,7 +153,8 @@ export function mountFaithfulList(container: HTMLElement): void {
       if (selectedStatus === "vivant" || selectedStatus === "decede") query = query.eq("statut", selectedStatus);
       if (current.get("communaute")) {
         query = query.eq("communaute_id", current.get("communaute")!);
-      } else if (current.get("quartier")) {
+      }
+      if (current.get("quartier")) {
         const communityIds = communities
           .filter((item) => item.quartier_id === current.get("quartier"))
           .map((item) => item.id);
