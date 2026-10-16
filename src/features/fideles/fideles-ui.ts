@@ -345,7 +345,7 @@ export async function mountFaithfulProfile(
   const subtitleNode = container.querySelector<HTMLElement>("#profile-subtitle");
   const contentNode = container.querySelector<HTMLElement>("#profile-content");
   const feedback = container.querySelector<HTMLElement>("#profile-feedback");
-  if (!nameNode || !subtitleNode || !contentNode || !feedback) return;
+  if (!nameNode || !subtitleNode || !contentNode || !feedback) return closeLivret;
   const nameEl = nameNode!;
   const subtitleEl = subtitleNode!;
   const contentEl = contentNode!;
