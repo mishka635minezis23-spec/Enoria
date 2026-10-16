@@ -1,6 +1,6 @@
 import "./styles.css";
 import { getAppConfig, hasSupabaseConfig } from "./config/app-config";
-import { loadActivePastoralYear, loadUserContext, signOut, type UserContext } from "./auth/auth-service";
+import { loadActivePastoralYear, loadUserContext, signOut, type ActivePastoralYear, type UserContext } from "./auth/auth-service";
 import { canAccessModule } from "./auth/permissions";
 import { getCurrentRoute, getFaithfulIdFromRoute, loadRouteContent, navigateTo, ROUTES, type RouteKey } from "./router";
 import { mountFaithfulList, mountFaithfulProfile } from "./features/fideles/fideles-ui";
@@ -50,7 +50,7 @@ async function bootstrap(): Promise<void> {
       renderLoginScreen(appRoot, config, () => void bootstrap());
       return;
     }
-    let activePastoralYear: string | null = null;
+    let activePastoralYear: ActivePastoralYear | null = null;
     try {
       activePastoralYear = await loadActivePastoralYear(context.assignments[0].paroisse_id);
     } catch (error) {
@@ -66,7 +66,7 @@ async function bootstrap(): Promise<void> {
   }
 }
 
-function renderApplication(context: UserContext, activePastoralYear: string | null): void {
+function renderApplication(context: UserContext, activePastoralYear: ActivePastoralYear | null): void {
   if (removeAppListeners) removeAppListeners();
 
   const config = getAppConfig();
@@ -107,7 +107,7 @@ function renderApplication(context: UserContext, activePastoralYear: string | nu
         <header class="sticky top-0 z-20 flex min-h-[4.25rem] items-center justify-between gap-3 border-b border-slate-200/80 bg-white/90 px-4 py-2 backdrop-blur md:px-8">
           <div class="flex min-w-0 items-center gap-3">
             <button class="mobile-nav rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700" id="open-menu" aria-label="Ouvrir le menu">☰</button>
-            <div class="min-w-0"><p class="text-xs text-slate-400">Paroisse</p><p class="truncate text-sm font-semibold text-slate-700">${escapeHtml(config.parishName)}</p><p class="truncate text-[10px] text-slate-500">${activePastoralYear ? `Année active : ${escapeHtml(activePastoralYear)}` : "Aucune année pastorale active"}</p></div>
+            <div class="min-w-0"><p class="text-xs text-slate-400">Paroisse</p><p class="truncate text-sm font-semibold text-slate-700">${escapeHtml(config.parishName)}</p><p class="truncate text-[10px] text-slate-500">${activePastoralYear ? `Année active : ${escapeHtml(activePastoralYear.libelle)}` : "Aucune année pastorale active"}</p></div>
           </div>
           <div class="flex shrink-0 items-center gap-2 sm:gap-3">
             <span class="hidden text-xs text-slate-500 xl:inline" id="today"></span>
