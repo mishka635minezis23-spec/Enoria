@@ -35,14 +35,15 @@ export async function mountDimesPage(container: HTMLElement, context: UserContex
     form.querySelectorAll<HTMLInputElement|HTMLSelectElement|HTMLButtonElement>("input,select,button").forEach((item)=>item.disabled=true);
     return;
   }
-  yearNode.textContent=`Année pastorale : ${year.libelle}`;
+  const activeYear = year!;
+  yearNode.textContent=`Année pastorale : ${activeYear.libelle}`;
 
   async function loadDimes(): Promise<void> {
     rowsNode.innerHTML='<tr><td colspan="5" class="px-3 py-10 text-center text-sm text-slate-400">Chargement…</td></tr>';
     try {
       const [listResult,totalResult]=await Promise.all([
-        db.from("dimes").select("id,fidele_id,montant,devise,observation,created_at",{count:"exact"}).eq("annee_pastorale_id",year.id).order("created_at",{ascending:false}).range(0,49),
-        db.from("dimes").select("montant,devise").eq("annee_pastorale_id",year.id)
+        db.from("dimes").select("id,fidele_id,montant,devise,observation,created_at",{count:"exact"}).eq("annee_pastorale_id",activeYear.id).order("created_at",{ascending:false}).range(0,49),
+        db.from("dimes").select("montant,devise").eq("annee_pastorale_id",activeYear.id)
       ]);
       if(listResult.error) throw listResult.error;
       if(totalResult.error) throw totalResult.error;
@@ -118,7 +119,7 @@ export async function mountDimesPage(container: HTMLElement, context: UserContex
     try {
       const {error}=await db.from("dimes").upsert({
         fidele_id:selectedId.value,
-        annee_pastorale_id:year.id,
+        annee_pastorale_id:activeYear.id,
         montant:amountValue,
         devise:currency.value as "USD"|"FC",
         observation:observation.value.trim()||null
