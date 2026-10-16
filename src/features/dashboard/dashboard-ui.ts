@@ -50,7 +50,7 @@ export async function mountDashboard(container: HTMLElement, context: UserContex
     if (sacError) throw sacError;
     const sums = new Map<string, number>();
     for (const row of sacraments ?? []) sums.set(row.type ?? "autre", (sums.get(row.type ?? "autre") ?? 0) + (row.total ?? 0));
-    const labels: Record<string,string> = { bapteme:"Baptêmes", eucharistie:"Eucharisties", confirmation:"Confirmations" };
+    const labels: Record<string,string> = { bapteme:"Baptêmes", eucharistie:"Eucharisties", confirmation:"Confirmations", mariage:"Mariages" };
     const items = [...sums].map(([type,value]) => ({label:labels[type] ?? type,value}));
     container.querySelector("#stat-sacraments")!.textContent = items.reduce((sum,item)=>sum+item.value,0).toLocaleString("fr-CD");
     renderBars(sacNode,items);
