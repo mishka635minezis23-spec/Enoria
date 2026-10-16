@@ -3,7 +3,7 @@ import { APP_CONFIG } from "./config/app-config";
 import { getCurrentRoute, loadRouteContent, navigateTo, ROUTES, type RouteKey } from "./router";
 import { registerSW } from "virtual:pwa-register";
 
-const app = document.querySelector<HTMLDivElement>("#app");
+document.documentElement.style.setProperty("--enoria-green", APP_CONFIG.theme.primary);\ndocument.documentElement.style.setProperty("--enoria-deep", APP_CONFIG.theme.primaryDark);\ndocument.documentElement.style.setProperty("--enoria-surface", APP_CONFIG.theme.surface);\n\nconst app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Le conteneur principal #app est introuvable.");
 
 const navItems = (Object.entries(ROUTES) as [RouteKey, (typeof ROUTES)[RouteKey]][])
@@ -15,9 +15,9 @@ const navItems = (Object.entries(ROUTES) as [RouteKey, (typeof ROUTES)[RouteKey]
 
 app.innerHTML = `
   <div class="min-h-screen md:flex">
-    <aside class="sidebar flex min-h-screen flex-col bg-[#123b32] text-white" id="sidebar" data-open="false">
+    <aside class="sidebar flex min-h-screen flex-col bg-[var(--enoria-deep)] text-white md:sticky md:top-0 md:h-screen md:w-64 md:shrink-0" id="sidebar" data-open="false">
       <div class="flex items-center gap-3 border-b border-white/10 px-5 py-5">
-        <div class="grid h-11 w-11 place-items-center rounded-xl bg-white text-lg font-bold text-[#176653]">E</div>
+        <div class="grid h-11 w-11 place-items-center rounded-xl bg-white text-lg font-bold text-[var(--enoria-green)]">E</div>
         <div class="min-w-0"><p class="text-lg font-semibold tracking-wide">Enoria</p><p class="truncate text-xs text-emerald-100/70">${APP_CONFIG.parishName}</p></div>
         <button class="ml-auto rounded-lg p-2 text-white/70 hover:bg-white/10 md:hidden" id="close-menu" aria-label="Fermer le menu">✕</button>
       </div>
@@ -82,7 +82,7 @@ async function renderRoute(): Promise<void> {
         <p class="text-sm font-semibold text-rose-700">Page indisponible</p>
         <h1 class="mt-2 text-xl font-semibold text-slate-900">Connexion ou fichier indisponible</h1>
         <p class="mt-2 max-w-xl text-sm leading-6 text-slate-600">Cette page n'a pas pu être chargée. Vérifie la connexion puis réessaie. Aucune donnée personnelle n'est enregistrée hors ligne dans cette version.</p>
-        <button id="retry-page" class="mt-5 rounded-lg bg-[#176653] px-4 py-2.5 text-sm font-medium text-white">Réessayer</button>
+        <button id="retry-page" class="mt-5 rounded-lg bg-[var(--enoria-green)] px-4 py-2.5 text-sm font-medium text-white">Réessayer</button>
       </section>`;
     document.querySelector<HTMLButtonElement>("#retry-page")?.addEventListener("click", () => void renderRoute());
   }
@@ -117,7 +117,7 @@ const updateSW = registerSW({
     message.className = "text-sm text-slate-700";
     message.textContent = "Une mise à jour d'Enoria est prête.";
     const button = document.createElement("button");
-    button.className = "shrink-0 rounded-lg bg-[#176653] px-3 py-2 text-xs font-semibold text-white";
+    button.className = "shrink-0 rounded-lg bg-[var(--enoria-green)] px-3 py-2 text-xs font-semibold text-white";
     button.textContent = "Actualiser";
     button.addEventListener("click", () => void updateSW(true));
     banner.append(message, button);
