@@ -8,7 +8,8 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   --enoria-green: #176653;
-  --enoria-deep: #123b32;\n  --enoria-surface: #f8fafc;
+  --enoria-deep: #123b32;
+  --enoria-surface: #f8fafc;
 }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; background: var(--enoria-surface); }
