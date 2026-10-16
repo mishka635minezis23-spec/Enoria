@@ -70,6 +70,9 @@ export async function mountDimesPage(container: HTMLElement, context: UserContex
   }
 
   async function searchFaithful(): Promise<void> {
+    selectedId.value="";
+    selectedNode.textContent="";
+    selectedNode.classList.add("hidden");
     const term=clean(search.value);
     if(!term) {
       feedback.textContent="Saisis un nom ou un prénom pour rechercher.";
