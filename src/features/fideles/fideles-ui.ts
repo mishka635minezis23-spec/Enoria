@@ -408,6 +408,8 @@ export async function mountFaithfulProfile(
           const mentionsHtml = (mentionResult.error ? [] : mentionResult.data ?? []).map((item) => `<li class="flex justify-between gap-3 py-2 text-xs"><span>${escapeHtml(item.type_mention)}</span><span class="text-slate-500">${escapeHtml(item.statut)}</span></li>`).join("");
           const canWrite = context.roles.some((role) => role === "secretaire" || role === "cure");
           let editorHtml = "";
+          let yearsForForm: {id:string;libelle:string;date_debut:string;active:boolean}[] = [];
+          let communitiesForForm: {id:string;nom:string}[] = [];
           if (canWrite) {
             const [yearsResult, communitiesResult] = await Promise.all([
               supabase.from("annees_pastorales").select("id,libelle,date_debut,active").eq("paroisse_id",faithful.paroisse_id).order("date_debut",{ascending:false}),
@@ -415,11 +417,13 @@ export async function mountFaithfulProfile(
             ]);
             if (yearsResult.error) throw yearsResult.error;
             if (communitiesResult.error) throw communitiesResult.error;
+            yearsForForm = yearsResult.data;
+            communitiesForForm = communitiesResult.data;
             const availableTypes = (["eucharistie","confirmation"] as const).filter((type) =>
               !(sacramentResult.data ?? []).some((item) => item.type === type)
             );
-            const yearOptions = yearsResult.data.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.libelle)}</option>`).join("");
-            const communityOptions = communitiesResult.data.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.nom)}</option>`).join("");
+            const yearOptions = yearsForForm.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.libelle)}</option>`).join("");
+            const communityOptions = communitiesForForm.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.nom)}</option>`).join("");
             const defaultYear = yearsResult.data.find((item) => item.id === activeYear?.id)?.id ?? yearsResult.data.find((item) => item.active)?.id ?? yearsResult.data[0]?.id ?? "";
             const defaultCommunity = communitiesResult.data.some((item) => item.id === faithful.communaute_id) ? faithful.communaute_id : communitiesResult.data[0]?.id ?? "";
             editorHtml = `
@@ -462,10 +466,10 @@ export async function mountFaithfulProfile(
             bindPartialDate(addForm,"sacrament");
             const yearSelect = addForm.querySelector<HTMLSelectElement>('select[name="annee"]')!;
             const communitySelect = addForm.querySelector<HTMLSelectElement>('select[name="communaute"]')!;
-            const yearOptionsData = yearsResult.data;
-            const communityOptionsData = communitiesResult.data;
-            yearSelect.value = yearOptionsData.some((item)=>item.id===activeYear?.id) ? activeYear!.id : yearOptionsData.find((item)=>item.active)?.id ?? yearOptionsData[0].id;
-            communitySelect.value = communityOptionsData.some((item)=>item.id===faithful.communaute_id) ? faithful.communaute_id : communityOptionsData[0].id;
+            const yearOptionsData = yearsForForm;
+            const communityOptionsData = communitiesForForm;
+            yearSelect.value = yearOptionsData.some((item)=>item.id===activeYear?.id) ? activeYear!.id : yearOptionsData.find((item)=>item.active)?.id ?? yearOptionsData[0]?.id ?? "";
+            communitySelect.value = communityOptionsData.some((item)=>item.id===faithful.communaute_id) ? faithful.communaute_id : communityOptionsData[0]?.id ?? "";
             addForm.addEventListener("submit",async(event)=>{
               event.preventDefault();
               const formFeedback=addForm.querySelector<HTMLElement>("#add-sacrament-feedback")!;
