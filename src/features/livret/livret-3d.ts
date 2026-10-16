@@ -122,15 +122,15 @@ export async function mountLivret3D(container:HTMLElement,data:LivretData):Promi
     book.add(spine);
 
     const leftLines=[
-      `Naissance : ${escapeHtml(data.birthText)}`,
-      `Parents : ${escapeHtml(data.parentsText)}`,
-      `Communauté : ${escapeHtml(data.communityText)}`,
+      `Naissance : ${data.birthText}`,
+      `Parents : ${data.parentsText}`,
+      `Communauté : ${data.communityText}`,
       "Ce livret est une représentation numérique du registre paroissial.",
       "Les références du registre papier demeurent la source officielle."
     ];
     const rightLines=[
-      ...data.sacraments.map((item)=>`${escapeHtml(item.label)} — ${escapeHtml(item.date)} — ${escapeHtml(item.reference)}`),
-      ...data.marriages.map((item)=>`${escapeHtml(item.label)} — ${escapeHtml(item.date)} — ${escapeHtml(item.spouse)}`)
+      ...data.sacraments.map((item)=>`${item.label} — ${item.date} — ${item.reference}`),
+      ...data.marriages.map((item)=>`${item.label} — ${item.date} — ${item.spouse}`)
     ];
     const leftTexture=new THREE.CanvasTexture(makePageCanvas(data.faithfulName,leftLines));
     leftTexture.colorSpace=THREE.SRGBColorSpace;
