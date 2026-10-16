@@ -1,6 +1,8 @@
 import type { Database, Tables } from "../../types/database.types";
 import type { ActivePastoralYear, UserContext } from "../../auth/auth-service";
 import { getSupabaseClient } from "../../lib/supabase";
+import { getAppConfig } from "../../config/app-config";
+import { createCertificatePdf, downloadCertificatePdf } from "../rapports/certificate-pdf";
 import {
   getFaithfulInitialTab,
   getFaithfulListQuery,
