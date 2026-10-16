@@ -1,7 +1,8 @@
 import type { ActivePastoralYear, UserContext } from "../../auth/auth-service";
 import { getSupabaseClient } from "../../lib/supabase";
 
-const safe = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c] ?? c));
+const htmlEscapes: Record<string, string> = { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" };
+const safe = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, (c) => htmlEscapes[c] ?? c);
 
 function renderBars(node: HTMLElement, items: { label: string; value: number }[]): void {
   const max = Math.max(1, ...items.map((item) => item.value));
