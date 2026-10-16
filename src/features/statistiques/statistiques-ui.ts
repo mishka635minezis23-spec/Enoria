@@ -83,11 +83,15 @@ export async function mountStatistics(container:HTMLElement,context:UserContext,
     if(communitySelect.value)nextParams.set("communaute",communitySelect.value);
     updateHash(nextParams);
 
-    const allowedCommunityIds=communitySelect.value
+    let allowedCommunityIds=communitySelect.value
       ? [communitySelect.value]
       : quartierSelect.value
         ? communities.filter((x)=>x.quartier_id===quartierSelect.value).map((x)=>x.id)
         : communities.map((x)=>x.id);
+    if(communitySelect.value&&quartierSelect.value){
+      const selectedCommunity=communities.find((item)=>item.id===communitySelect.value);
+      if(!selectedCommunity||selectedCommunity.quartier_id!==quartierSelect.value)allowedCommunityIds=[];
+    }
     if(quartierSelect.value&&allowedCommunityIds.length===0){
       renderBars(container.querySelector<HTMLElement>("#stats-sacrament-chart")!,[]);
       renderBars(container.querySelector<HTMLElement>("#stats-age-chart")!,[]);
