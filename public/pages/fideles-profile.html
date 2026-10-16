@@ -1,0 +1,20 @@
+<section class="space-y-6" data-faithful-profile>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <button id="faithful-back" type="button" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">← Retour à la liste</button>
+    <span class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] text-slate-500">Dossier individuel</span>
+  </div>
+  <header class="page-card p-5 sm:p-6">
+    <p class="text-xs font-semibold uppercase tracking-widest text-emerald-700">Fiche du fidèle</p>
+    <h1 id="profile-name" class="mt-2 text-2xl font-semibold text-slate-900">Chargement…</h1>
+    <p id="profile-subtitle" class="mt-1 text-sm text-slate-500">Lecture des informations autorisées</p>
+  </header>
+  <nav class="flex gap-1 overflow-x-auto border-b border-slate-200" aria-label="Onglets du dossier">
+    <button type="button" class="profile-tab whitespace-nowrap border-b-2 border-emerald-700 px-4 py-3 text-sm font-semibold text-emerald-800" data-tab="general">Informations générales</button>
+    <button type="button" class="profile-tab whitespace-nowrap border-b-2 border-transparent px-4 py-3 text-sm font-medium text-slate-500" data-tab="sacrements">Sacrements</button>
+    <button type="button" class="profile-tab whitespace-nowrap border-b-2 border-transparent px-4 py-3 text-sm font-medium text-slate-500" data-tab="famille">Famille</button>
+    <button type="button" class="profile-tab whitespace-nowrap border-b-2 border-transparent px-4 py-3 text-sm font-medium text-slate-500" data-tab="historique">Historique</button>
+    <button type="button" class="profile-tab whitespace-nowrap border-b-2 border-transparent px-4 py-3 text-sm font-medium text-slate-500" data-tab="documents">Documents</button>
+  </nav>
+  <div id="profile-content" class="min-h-56"><div class="page-card p-6 text-sm text-slate-500">Chargement du dossier…</div></div>
+  <div id="profile-feedback" class="hidden rounded-lg p-3 text-sm" role="status"></div>
+</section>
