@@ -266,10 +266,11 @@ export async function mountFaithfulProfile(
     if (error) throw error;
     if (!faithful) throw new Error("Fidèle introuvable ou accès non autorisé.");
 
-    const [communityResult, quartierResult] = await Promise.all([
-      supabase.from("communautes").select("id,nom,quartier_id").eq("id", faithful.communaute_id).maybeSingle(),
-      supabase.from("quartiers").select("id,nom").maybeSingle()
-    ]);
+    const communityResult = await supabase
+      .from("communautes")
+      .select("id,nom,quartier_id")
+      .eq("id", faithful.communaute_id)
+      .maybeSingle();
     if (communityResult.error) throw communityResult.error;
     const community = communityResult.data;
     let quartierName = "—";
@@ -277,7 +278,6 @@ export async function mountFaithfulProfile(
       const q = await supabase.from("quartiers").select("id,nom").eq("id", community.quartier_id).maybeSingle();
       if (!q.error && q.data) quartierName = q.data.nom;
     }
-    void quartierResult;
 
     nameNode.textContent = `${faithful.prenom} ${faithful.nom}`;
     subtitleNode.textContent = `${faithful.sexe === "masculin" ? "Masculin" : faithful.sexe === "feminin" ? "Féminin" : "Sexe non précisé"} · ${faithful.statut === "decede" ? "Décédé" : "Vivant"}`;
