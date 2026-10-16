@@ -6,6 +6,7 @@ import { registerSW } from "virtual:pwa-register";
 document.documentElement.style.setProperty("--enoria-green", APP_CONFIG.theme.primary);
 document.documentElement.style.setProperty("--enoria-deep", APP_CONFIG.theme.primaryDark);
 document.documentElement.style.setProperty("--enoria-surface", APP_CONFIG.theme.surface);
+document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute("content", APP_CONFIG.theme.primaryDark);
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("Le conteneur principal #app est introuvable.");
