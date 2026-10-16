@@ -6,9 +6,9 @@
   "description": "Registre numérique paroissial — Notre Dame d'Afrique",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --pretty"
+    "typecheck": "tsc --noEmit --pretty"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.14",
