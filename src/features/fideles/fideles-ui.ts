@@ -1,5 +1,5 @@
 import type { Database, Tables } from "../../types/database.types";
-import type { UserContext } from "../../auth/auth-service";
+import type { ActivePastoralYear, UserContext } from "../../auth/auth-service";
 import { getSupabaseClient } from "../../lib/supabase";
 import {
   getFaithfulInitialTab,
@@ -263,7 +263,8 @@ function renderField(label: string, value: unknown): string {
 export async function mountFaithfulProfile(
   container: HTMLElement,
   context: UserContext,
-  faithfulId: string
+  faithfulId: string,
+  activeYear: ActivePastoralYear | null
 ): Promise<void> {
   container.querySelector<HTMLButtonElement>("#faithful-back")?.addEventListener("click", navigateBackFromFaithful);
   const nameNode = container.querySelector<HTMLElement>("#profile-name");
