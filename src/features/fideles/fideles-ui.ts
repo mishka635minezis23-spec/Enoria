@@ -2,7 +2,6 @@ import type { Database, Tables } from "../../types/database.types";
 import type { ActivePastoralYear, UserContext } from "../../auth/auth-service";
 import { getSupabaseClient } from "../../lib/supabase";
 import { getAppConfig } from "../../config/app-config";
-import { createCertificatePdf, downloadCertificatePdf } from "../rapports/certificate-pdf";
 import {
   getFaithfulInitialTab,
   getFaithfulListQuery,
@@ -644,6 +643,7 @@ export async function mountFaithfulProfile(
             if (!record) throw new Error("Le sacrement source est introuvable.");
             const labels: Record<string,string> = { bapteme:"Baptême", eucharistie:"Eucharistie", confirmation:"Confirmation" };
             const config = getAppConfig();
+            const { createCertificatePdf, downloadCertificatePdf } = await import("../rapports/certificate-pdf");
             const bytes = await createCertificatePdf({
               parishName: config.parishName,
               dioceseName: config.dioceseName,
@@ -655,7 +655,7 @@ export async function mountFaithfulProfile(
               pageNumber: record.page_registre ?? "",
               minister: record.ministre ?? "",
               duplicateNumber: certificate.numero_duplicata,
-              emittedDate: new Intl.DateTimeFormat("fr-CD",{dateStyle:"long"}).format(new Date())
+              emittedDate: new Intl.DateTimeFormat("fr-CD",{dateStyle:"long"}).format(certificate.date_emission ? new Date(certificate.date_emission) : new Date())
             });
             if (markAsEmitted) {
               const { error: emitError } = await supabase.rpc("marquer_certificat_emis", { p_certificat: certificateId });
