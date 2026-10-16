@@ -36,12 +36,15 @@ function applyTheme(): void {
 }
 
 let removeAppListeners: (() => void) | null = null;
+let activePageCleanup: (() => void) | null = null;
 
 async function bootstrap(): Promise<void> {
   if (removeAppListeners) {
     removeAppListeners();
     removeAppListeners = null;
   }
+  activePageCleanup?.();
+  activePageCleanup = null;
   applyTheme();
   const config = getAppConfig();
 
@@ -157,6 +160,8 @@ function renderApplication(context: UserContext, activePastoralYear: ActivePasto
   let renderSequence = 0;
   async function renderRoute(): Promise<void> {
     const sequence = ++renderSequence;
+    activePageCleanup?.();
+    activePageCleanup = null;
     const route = getCurrentRoute();
     const faithfulId = route === "fideles" ? getFaithfulIdFromRoute() : null;
     updateActiveLink(route);
@@ -191,7 +196,9 @@ function renderApplication(context: UserContext, activePastoralYear: ActivePasto
       } else if (route === "sacrements") {
         mountSacramentsPage(content);
       } else if (route === "fideles" && faithfulId) {
-        void mountFaithfulProfile(content, context, faithfulId, activePastoralYear);
+        const cleanup = await mountFaithfulProfile(content, context, faithfulId, activePastoralYear);
+        if (sequence !== renderSequence) cleanup();
+        else activePageCleanup = cleanup;
       } else if (route === "fideles") {
         mountFaithfulList(content);
       }
