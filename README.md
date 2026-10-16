@@ -35,9 +35,13 @@ npm run preview
 
 ## Organisation
 
-- `src/config/app-config.ts` : source centrale de configuration de l'installation
-- `src/main.ts` : coque persistante, menu et démarrage PWA
+- `src/config/app-config.ts` : source centrale de configuration et stockage local des paramètres publics
+- `src/lib/supabase.ts` : client Supabase typé, sans clé secrète
+- `src/auth/` : authentification et permissions par rôle
+- `src/ui/` : écrans de première configuration, connexion et paramètres
+- `src/main.ts` : coque persistante, navigation et démarrage PWA
 - `src/router.ts` : routes et chargement des vues
+- `src/types/database.types.ts` : types générés depuis le schéma Supabase
 - `src/styles.css` : styles Tailwind et règles de présentation
 - `public/pages/*.html` : une vue HTML par module fonctionnel
 
@@ -56,9 +60,15 @@ Les routes utilisent des fragments (`#/dashboard`, `#/fideles`, etc.). Le menu r
 
 ## Configuration et sécurité
 
-La source centrale est `src/config/app-config.ts`. Les paramètres Supabase sont volontairement vides à ce stade. Seule une URL et une clé publique (publishable/anon) pourront être utilisées dans le navigateur. **La clé service_role ne doit jamais être exposée côté client ni commitée dans ce dépôt.**
+Au premier lancement, un écran de configuration demande le nom de la paroisse, l'URL Supabase et la clé publique publishable (ou anon historique). Ces valeurs sont conservées localement sur le PC, dans une seule source de configuration : `src/config/app-config.ts`. Le curé peut ensuite modifier la configuration depuis Paramètres ; changer de projet Supabase ferme la session et redémarre l'application.
 
-Les règles d'accès devront être appliquées dans Supabase avec RLS et validations côté base avant toute ouverture des fonctions métier.
+Les comptes ne peuvent pas s'inscrire depuis l'application. Ils doivent être créés par l'administrateur dans Supabase Auth, puis recevoir une affectation dans `affectations_utilisateurs`. Le profil associé est créé par le trigger existant.
+
+Seule l'URL et une clé publique sont utilisées dans le navigateur. **La clé service_role ou une clé sb_secret ne doit jamais être exposée côté client ni commitée dans ce dépôt.** Le menu est filtré par rôle, mais la sécurité réelle reste assurée par les politiques RLS de la base.
+
+Le type `Database` dans `src/types/database.types.ts` a été généré depuis le schéma existant. Il faut le régénérer après toute évolution validée de la base.
+
+Avant d'activer les écritures métier, les points bloquants décrits dans `docs/database-compatibility.md` doivent être traités et validés côté base.
 
 ## Politique hors ligne
 
