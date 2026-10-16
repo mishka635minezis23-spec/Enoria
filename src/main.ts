@@ -278,12 +278,14 @@ const updateSW = registerSW({
 
 void bootstrap();
 
-window.addEventListener("offline", () => {
+function showOfflineBanner(): void {
   if (document.querySelector("#offline-banner")) return;
   const banner = document.createElement("div");
   banner.id = "offline-banner";
   banner.className = "fixed bottom-4 left-4 z-40 rounded-lg bg-amber-100 px-4 py-3 text-xs font-medium text-amber-900 shadow";
   banner.textContent = "Hors connexion : les opérations métier sont suspendues.";
   document.body.append(banner);
-});
+}
+if (!navigator.onLine) showOfflineBanner();
+window.addEventListener("offline", showOfflineBanner);
 window.addEventListener("online", () => document.querySelector("#offline-banner")?.remove());
