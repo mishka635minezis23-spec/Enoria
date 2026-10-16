@@ -109,6 +109,10 @@ export async function mountStatistics(container:HTMLElement,context:UserContext,
       ]);
       if(faithfulStats.error)throw faithfulStats.error;
       if(sacramentStats.error)throw sacramentStats.error;
+      let marriageQuery=db.from("evenements_matrimoniaux").select("id",{count:"exact",head:true}).eq("paroisse_id",parishId).eq("annee_pastorale_id",year.id).eq("type","novas_nuptias");
+      if(quartierSelect.value||communitySelect.value)marriageQuery=marriageQuery.in("communaute_historique_id",allowedCommunityIds);
+      const marriageStats=await marriageQuery;
+      if(marriageStats.error)throw marriageStats.error;
       let fRows=faithfulStats.data??[];
       let sRows=sacramentStats.data??[];
       if(quartierSelect.value||communitySelect.value){
@@ -119,8 +123,10 @@ export async function mountStatistics(container:HTMLElement,context:UserContext,
       container.querySelector("#stats-faithful")!.textContent=living.toLocaleString("fr-CD");
       const sacTotals=new Map<string,number>();
       for(const row of sRows)sacTotals.set(row.type??"autre",(sacTotals.get(row.type??"autre")??0)+(row.total??0));
-      const typeLabels:Record<string,string>={bapteme:"Baptêmes",eucharistie:"Eucharisties",confirmation:"Confirmations"};
+      const typeLabels:Record<string,string>={bapteme:"Baptêmes",eucharistie:"Eucharisties",confirmation:"Confirmations",mariage:"Mariages"};
       const sacItems=[...sacTotals].map(([type,value])=>({label:typeLabels[type]??type,value}));
+      const marriageCount=marriageStats.count??0;
+      if(marriageCount>0)sacItems.push({label:"Mariages",value:marriageCount});
       const sacTotal=sacItems.reduce((sum,item)=>sum+item.value,0);
       container.querySelector("#stats-sacraments")!.textContent=sacTotal.toLocaleString("fr-CD");
       renderBars(container.querySelector<HTMLElement>("#stats-sacrament-chart")!,sacItems);
