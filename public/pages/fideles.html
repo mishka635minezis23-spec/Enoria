@@ -1,7 +1,28 @@
-<section class="space-y-6">
-  <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><p class="text-xs font-semibold uppercase tracking-[.16em] text-emerald-700">Registre des personnes</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Gestion des fidèles</h1><p class="mt-1 text-sm text-slate-500">Recherche, consultation et inscription à partir d'une carte de baptême.</p></div><button disabled class="w-fit cursor-not-allowed rounded-lg bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-400" title="Disponible après connexion sécurisée">＋ Ajouter un fidèle</button></div>
-  <div class="page-card p-5"><div class="grid gap-3 md:grid-cols-[minmax(14rem,1fr)_12rem_12rem_10rem]"><input disabled placeholder="Rechercher un nom ou prénom" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm" /><select disabled class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"><option>Tous les quartiers</option></select><select disabled class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"><option>Toutes les communautés</option></select><select disabled class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"><option>Tous les statuts</option></select></div>
-    <div class="mt-5 overflow-x-auto"><table class="w-full min-w-[680px] text-left text-sm"><thead class="border-y border-slate-100 bg-slate-50 text-xs text-slate-500"><tr><th class="px-3 py-3 font-medium">N°</th><th class="px-3 py-3 font-medium">Nom complet</th><th class="px-3 py-3 font-medium">Sexe</th><th class="px-3 py-3 font-medium">Quartier</th><th class="px-3 py-3 font-medium">Communauté</th><th class="px-3 py-3 font-medium">Statut</th><th class="px-3 py-3 font-medium">Action</th></tr></thead><tbody><tr><td colspan="7" class="px-3 py-12 text-center text-sm text-slate-400">La liste sera affichée après connexion à la base de données.</td></tr></tbody></table></div>
+<section class="space-y-6" data-fideles-list>
+  <header class="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+    <div><p class="text-xs font-semibold uppercase tracking-widest text-emerald-700">Registre des personnes</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Gestion des fidèles</h1><p class="mt-1 text-sm text-slate-500">Recherche et consultation des dossiers enregistrés sur preuve de baptême.</p></div>
+    <button id="add-faithful" type="button" disabled class="w-fit cursor-not-allowed rounded-lg bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-400" title="L'inscription sera activée après mise en place de l'enregistrement atomique côté base">＋ Ajouter un fidèle</button>
+  </header>
+  <div class="page-card p-5">
+    <form id="faithful-filters" class="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(15rem,1fr)_12rem_12rem_10rem_10rem_auto]">
+      <label class="block text-xs font-medium text-slate-600">Nom ou prénom<input id="faithful-search" type="search" maxlength="80" placeholder="Rechercher un fidèle…" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100" /></label>
+      <label class="block text-xs font-medium text-slate-600">Quartier<select id="filter-quartier" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="">Tous les quartiers</option></select></label>
+      <label class="block text-xs font-medium text-slate-600">Communauté<select id="filter-communaute" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="">Toutes les communautés</option></select></label>
+      <label class="block text-xs font-medium text-slate-600">Sexe<select id="filter-sexe" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="">Tous</option><option value="masculin">Masculin</option><option value="feminin">Féminin</option></select></label>
+      <label class="block text-xs font-medium text-slate-600">Statut<select id="filter-statut" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="">Tous</option><option value="vivant">Vivant</option><option value="decede">Décédé</option></select></label>
+      <div class="flex items-end"><button type="submit" class="w-full rounded-lg bg-[var(--enoria-green)] px-4 py-2.5 text-sm font-semibold text-white">Rechercher</button></div>
+    </form>
+    <div id="faithful-feedback" class="mt-4 hidden rounded-lg p-3 text-sm" role="status"></div>
+    <div class="mt-5 overflow-x-auto">
+      <table class="w-full min-w-[760px] text-left text-sm">
+        <thead class="border-y border-slate-100 bg-slate-50 text-xs text-slate-500"><tr><th class="px-3 py-3 font-medium">N°</th><th class="px-3 py-3 font-medium">Nom complet</th><th class="px-3 py-3 font-medium">Sexe</th><th class="px-3 py-3 font-medium">Quartier</th><th class="px-3 py-3 font-medium">Communauté</th><th class="px-3 py-3 font-medium">Statut</th><th class="px-3 py-3 font-medium">Action</th></tr></thead>
+        <tbody id="faithful-rows"><tr><td colspan="7" class="px-3 py-12 text-center text-sm text-slate-400">Chargement du registre…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+      <p id="faithful-count" class="text-xs text-slate-500">Chargement…</p>
+      <div class="flex items-center gap-2"><button id="faithful-prev" type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 disabled:opacity-40">Précédent</button><span id="faithful-page" class="min-w-16 text-center text-xs text-slate-500">Page 1</span><button id="faithful-next" type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 disabled:opacity-40">Suivant</button></div>
+    </div>
   </div>
-  <p class="text-xs leading-5 text-slate-400">Règle d'inscription : une carte de baptême ou une preuve reconnue est obligatoire. Sans preuve, aucun fidèle n'est créé. L'enregistrement du fidèle et de son baptême sera atomique.</p>
+  <p class="text-xs leading-5 text-slate-400">Les droits RLS limitent automatiquement les résultats au périmètre autorisé pour le compte connecté. Les données personnelles ne sont pas conservées hors ligne.</p>
 </section>
