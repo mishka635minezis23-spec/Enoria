@@ -109,11 +109,22 @@ void renderRoute();
 
 const updateSW = registerSW({
   onNeedRefresh() {
-    const event = new CustomEvent("enoria:update-available");
-    window.dispatchEvent(event);
+    if (document.querySelector("#update-banner")) return;
+    const banner = document.createElement("div");
+    banner.id = "update-banner";
+    banner.className = "fixed bottom-4 right-4 z-50 flex max-w-sm items-center gap-3 rounded-xl border border-emerald-200 bg-white p-4 shadow-xl";
+    const message = document.createElement("p");
+    message.className = "text-sm text-slate-700";
+    message.textContent = "Une mise à jour d'Enoria est prête.";
+    const button = document.createElement("button");
+    button.className = "shrink-0 rounded-lg bg-[#176653] px-3 py-2 text-xs font-semibold text-white";
+    button.textContent = "Actualiser";
+    button.addEventListener("click", () => void updateSW(true));
+    banner.append(message, button);
+    document.body.append(banner);
   },
   onOfflineReady() {
     console.info("Enoria : les ressources statiques sont disponibles hors ligne.");
   }
 });
-window.addEventListener("enoria:apply-update", () => void updateSW(true));
+
