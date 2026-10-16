@@ -26,12 +26,20 @@ export function getFaithfulIdFromRoute(): string | null {
   try { return decodeURIComponent(parts[1]); } catch { return null; }
 }
 
-export function getFaithfulReturnQuery(): string {
-  return new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("from") ?? "";
+export function getFaithfulReturnHash(): string {
+  return new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("return") ?? "#/fideles";
+}
+
+export function navigateBackFromFaithful(): void {
+  const returnHash = getFaithfulReturnHash();
+  window.location.hash = returnHash.startsWith("#/") ? returnHash : "#/fideles";
 }
 
 export function getFaithfulListQuery(): string {
-  if (getFaithfulIdFromRoute()) return getFaithfulReturnQuery();
+  if (getFaithfulIdFromRoute()) {
+    const returnHash = getFaithfulReturnHash();
+    return returnHash.startsWith("#/fideles?") ? returnHash.split("?")[1] : "";
+  }
   return window.location.hash.split("?")[1] ?? "";
 }
 
@@ -42,11 +50,9 @@ export function updateFaithfulListQuery(params: URLSearchParams): void {
 }
 
 export function navigateToFaithful(id: string): void {
-  const currentQuery = getFaithfulListQuery();
-  const params = new URLSearchParams();
-  if (currentQuery) params.set("from", currentQuery);
-  const suffix = params.toString() ? `?${params.toString()}` : "";
-  window.location.hash = `#/fideles/${encodeURIComponent(id)}${suffix}`;
+  const returnHash = window.location.hash || "#/fideles";
+  const params = new URLSearchParams({ return: returnHash });
+  window.location.hash = `#/fideles/${encodeURIComponent(id)}?${params.toString()}`;
 }
 
 export function navigateToFaithfulList(query = ""): void {
