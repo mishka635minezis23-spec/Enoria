@@ -75,3 +75,14 @@ export async function loadUserContext(): Promise<UserContext | null> {
     assignments
   };
 }
+
+export async function loadActivePastoralYear(parishId: string): Promise<string | null> {
+  const { data, error } = await getSupabaseClient()
+    .from("annees_pastorales")
+    .select("id,libelle")
+    .eq("paroisse_id", parishId)
+    .eq("active", true)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.libelle ?? null;
+}
