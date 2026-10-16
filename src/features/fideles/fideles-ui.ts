@@ -654,7 +654,7 @@ export async function mountFaithfulProfile(
             } else if (item.statut === "valide" && isPriest) {
               actions = `<button type="button" data-emit-cert="${item.id}" class="mt-3 rounded-lg bg-[var(--enoria-green)] px-3 py-2 text-xs font-semibold text-white">Générer le PDF et émettre</button>`;
             } else if (item.statut === "emis") {
-              actions = `<button type="button" data-download-cert="${item.id}" class="mt-3 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700">Télécharger à nouveau le PDF</button>`;
+              actions = '<p class="mt-2 text-xs text-slate-500">Duplicata émis. En cas de perte, créer une nouvelle demande pour conserver la traçabilité.</p>';
             } else if (item.statut === "valide") {
               actions = '<p class="mt-2 text-xs text-emerald-700">Validé. L’émission du PDF est réservée au curé.</p>';
             } else if (item.statut === "attente") {
@@ -752,13 +752,6 @@ export async function mountFaithfulProfile(
             button.addEventListener("click", async () => {
               button.disabled = true;
               try { await emitPdf(button.dataset.emitCert!,true); }
-              catch (error) { showActionError(error); button.disabled = false; }
-            });
-          });
-          contentEl.querySelectorAll<HTMLButtonElement>("[data-download-cert]").forEach((button) => {
-            button.addEventListener("click", async () => {
-              button.disabled = true;
-              try { await emitPdf(button.dataset.downloadCert!,false); }
               catch (error) { showActionError(error); button.disabled = false; }
             });
           });
