@@ -2,6 +2,7 @@ import type { Database, Tables } from "../../types/database.types";
 import type { UserContext } from "../../auth/auth-service";
 import { getSupabaseClient } from "../../lib/supabase";
 import {
+  getFaithfulInitialTab,
   getFaithfulListQuery,
   navigateBackFromFaithful,
   navigateToFaithful,
@@ -297,7 +298,7 @@ export async function mountFaithfulProfile(
     subtitleEl.textContent = `${faithful.sexe === "masculin" ? "Masculin" : faithful.sexe === "feminin" ? "Féminin" : "Sexe non précisé"} · ${faithful.statut === "decede" ? "Décédé" : "Vivant"}`;
 
     const tabs = [...container.querySelectorAll<HTMLButtonElement>("[data-tab]")];
-    let activeTab = "general";
+    let activeTab = getFaithfulInitialTab();
     let tabSequence = 0;
 
     const renderGeneral = (): void => {
@@ -406,7 +407,6 @@ export async function mountFaithfulProfile(
     }
 
     tabs.forEach((button) => button.addEventListener("click", () => void renderTab(button.dataset.tab ?? "general")));
-    renderGeneral();
     void renderTab(activeTab);
   } catch (error) {
     nameEl.textContent = "Dossier indisponible";
