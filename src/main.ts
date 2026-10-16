@@ -11,9 +11,10 @@ const root = document.querySelector<HTMLDivElement>("#app");
 if (!root) throw new Error("Le conteneur principal #app est introuvable.");
 
 function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (character) => ({
+  const replacements: Record<string, string> = {
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  })[character] ?? character);
+  };
+  return value.replace(/[&<>"']/g, (character) => replacements[character] ?? character);
 }
 
 function applyTheme(): void {
@@ -28,6 +29,10 @@ function applyTheme(): void {
 let removeAppListeners: (() => void) | null = null;
 
 async function bootstrap(): Promise<void> {
+  if (removeAppListeners) {
+    removeAppListeners();
+    removeAppListeners = null;
+  }
   applyTheme();
   const config = getAppConfig();
 
