@@ -10,7 +10,6 @@ import {
 } from "../../router";
 
 type Precision = Database["public"]["Enums"]["precision_date"];
-type Fidele = Tables<"fideles">;
 type Community = Tables<"communautes">;
 type Quartier = Tables<"quartiers">;
 
