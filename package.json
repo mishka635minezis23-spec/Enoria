@@ -8,7 +8,9 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit --pretty"
+    "typecheck": "tsc --noEmit --pretty",
+    "predev": "node scripts/generate-icons.mjs",
+    "prebuild": "node scripts/generate-icons.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.14",
