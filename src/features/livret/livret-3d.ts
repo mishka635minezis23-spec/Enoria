@@ -51,11 +51,16 @@ function makePageCanvas(heading:string,lines:string[]):HTMLCanvasElement{
   return canvas;
 }
 
+function escapeHtml(value:string):string{
+  const map:Record<string,string>={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"};
+  return value.replace(/[&<>"']/g,(c)=>map[c]??c);
+}
+
 function renderFallback(container:HTMLElement,data:LivretData):void{
   container.innerHTML=`
     <div class="grid gap-4 md:grid-cols-2">
-      <article class="rounded-xl border border-amber-200 bg-[#fbf8ef] p-6 shadow-sm"><p class="text-xs uppercase tracking-widest text-emerald-800">Livret paroissial · 2D</p><h2 class="mt-3 font-serif text-xl font-semibold text-slate-900">${data.faithfulName}</h2><div class="mt-5 space-y-3 text-sm text-slate-700"><p><strong>Naissance :</strong> ${data.birthText}</p><p><strong>Parents :</strong> ${data.parentsText}</p><p><strong>Communauté :</strong> ${data.communityText}</p></div></article>
-      <article class="rounded-xl border border-amber-200 bg-[#fbf8ef] p-6 shadow-sm"><p class="text-xs uppercase tracking-widest text-emerald-800">Parcours sacramentel</p><div class="mt-4 space-y-3">${data.sacraments.map((item)=>`<div class="border-b border-amber-200 pb-3"><p class="font-serif font-semibold text-slate-900">${item.label}</p><p class="mt-1 text-xs text-slate-600">${item.date} · ${item.reference}</p></div>`).join("")||'<p class="text-sm text-slate-500">Aucun sacrement accessible.</p>'}${data.marriages.map((item)=>`<div class="border-b border-amber-200 pb-3"><p class="font-serif font-semibold text-slate-900">${item.label}</p><p class="mt-1 text-xs text-slate-600">${item.date} · Conjoint : ${item.spouse}</p></div>`).join("")}</div></article>
+      <article class="rounded-xl border border-amber-200 bg-[#fbf8ef] p-6 shadow-sm"><p class="text-xs uppercase tracking-widest text-emerald-800">Livret paroissial · 2D</p><h2 class="mt-3 font-serif text-xl font-semibold text-slate-900">${escapeHtml(data.faithfulName)}</h2><div class="mt-5 space-y-3 text-sm text-slate-700"><p><strong>Naissance :</strong> ${escapeHtml(data.birthText)}</p><p><strong>Parents :</strong> ${escapeHtml(data.parentsText)}</p><p><strong>Communauté :</strong> ${escapeHtml(data.communityText)}</p></div></article>
+      <article class="rounded-xl border border-amber-200 bg-[#fbf8ef] p-6 shadow-sm"><p class="text-xs uppercase tracking-widest text-emerald-800">Parcours sacramentel</p><div class="mt-4 space-y-3">${data.sacraments.map((item)=>`<div class="border-b border-amber-200 pb-3"><p class="font-serif font-semibold text-slate-900">${escapeHtml(item.label)}</p><p class="mt-1 text-xs text-slate-600">${escapeHtml(item.date)} · ${escapeHtml(item.reference)}</p></div>`).join("")||'<p class="text-sm text-slate-500">Aucun sacrement accessible.</p>'}${data.marriages.map((item)=>`<div class="border-b border-amber-200 pb-3"><p class="font-serif font-semibold text-slate-900">${escapeHtml(item.label)}</p><p class="mt-1 text-xs text-slate-600">${escapeHtml(item.date)} · Conjoint : ${escapeHtml(item.spouse)}</p></div>`).join("")}</div></article>
     </div>`;
 }
 
@@ -117,15 +122,15 @@ export async function mountLivret3D(container:HTMLElement,data:LivretData):Promi
     book.add(spine);
 
     const leftLines=[
-      `Naissance : ${data.birthText}`,
-      `Parents : ${data.parentsText}`,
-      `Communauté : ${data.communityText}`,
+      `Naissance : ${escapeHtml(data.birthText)}`,
+      `Parents : ${escapeHtml(data.parentsText)}`,
+      `Communauté : ${escapeHtml(data.communityText)}`,
       "Ce livret est une représentation numérique du registre paroissial.",
       "Les références du registre papier demeurent la source officielle."
     ];
     const rightLines=[
-      ...data.sacraments.map((item)=>`${item.label} — ${item.date} — ${item.reference}`),
-      ...data.marriages.map((item)=>`${item.label} — ${item.date} — ${item.spouse}`)
+      ...data.sacraments.map((item)=>`${escapeHtml(item.label)} — ${escapeHtml(item.date)} — ${escapeHtml(item.reference)}`),
+      ...data.marriages.map((item)=>`${escapeHtml(item.label)} — ${escapeHtml(item.date)} — ${escapeHtml(item.spouse)}`)
     ];
     const leftTexture=new THREE.CanvasTexture(makePageCanvas(data.faithfulName,leftLines));
     leftTexture.colorSpace=THREE.SRGBColorSpace;
