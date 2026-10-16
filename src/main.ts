@@ -22,6 +22,7 @@ function applyTheme(): void {
   document.documentElement.style.setProperty("--enoria-green", config.theme.primary);
   document.documentElement.style.setProperty("--enoria-deep", config.theme.primaryDark);
   document.documentElement.style.setProperty("--enoria-surface", config.theme.surface);
+  document.body.style.backgroundColor = config.theme.surface;
   document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
     ?.setAttribute("content", config.theme.primaryDark);
 }
