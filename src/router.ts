@@ -49,9 +49,16 @@ export function updateFaithfulListQuery(params: URLSearchParams): void {
   window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
 }
 
-export function navigateToFaithful(id: string): void {
+export type FaithfulProfileTab = "general" | "sacrements" | "famille" | "historique" | "documents";
+
+export function getFaithfulInitialTab(): FaithfulProfileTab {
+  const tab = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("tab");
+  return tab === "sacrements" || tab === "famille" || tab === "historique" || tab === "documents" ? tab : "general";
+}
+
+export function navigateToFaithful(id: string, tab: FaithfulProfileTab = "general"): void {
   const returnHash = window.location.hash || "#/fideles";
-  const params = new URLSearchParams({ return: returnHash });
+  const params = new URLSearchParams({ return, tab });
   window.location.hash = `#/fideles/${encodeURIComponent(id)}?${params.toString()}`;
 }
 
