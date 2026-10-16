@@ -26,8 +26,8 @@ export function navigateTo(route: RouteKey): void {
   window.location.hash = nextHash;
 }
 
-export async function loadRouteContent(route: RouteKey, target: HTMLElement): Promise<void> {
+export async function loadRouteContent(route: RouteKey): Promise<string> {
   const response = await fetch(`/pages/${ROUTES[route].file}`, { cache: "no-cache" });
   if (!response.ok) throw new Error(`Impossible de charger la page (${response.status}).`);
-  target.innerHTML = await response.text();
+  return response.text();
 }
