@@ -338,11 +338,12 @@ export async function mountFaithfulProfile(
     const { data: faithful, error } = await supabase.from("fideles").select("*").eq("id", faithfulId).maybeSingle();
     if (error) throw error;
     if (!faithful) throw new Error("Fidèle introuvable ou accès non autorisé.");
+    const faithfulRecord = faithful!;
 
     const communityResult = await supabase
       .from("communautes")
       .select("id,nom,quartier_id")
-      .eq("id", faithful.communaute_id)
+      .eq("id", faithfulRecord.communaute_id)
       .maybeSingle();
     if (communityResult.error) throw communityResult.error;
     const community = communityResult.data;
@@ -352,26 +353,26 @@ export async function mountFaithfulProfile(
       if (!q.error && q.data) quartierName = q.data.nom;
     }
 
-    nameEl.textContent = `${faithful.prenom} ${faithful.nom}`;
-    subtitleEl.textContent = `${faithful.sexe === "masculin" ? "Masculin" : faithful.sexe === "feminin" ? "Féminin" : "Sexe non précisé"} · ${faithful.statut === "decede" ? "Décédé" : "Vivant"}`;
+    nameEl.textContent = `${faithfulRecord.prenom} ${faithfulRecord.nom}`;
+    subtitleEl.textContent = `${faithfulRecord.sexe === "masculin" ? "Masculin" : faithfulRecord.sexe === "feminin" ? "Féminin" : "Sexe non précisé"} · ${faithfulRecord.statut === "decede" ? "Décédé" : "Vivant"}`;
 
     const tabs = [...container.querySelectorAll<HTMLButtonElement>("[data-tab]")];
     let tabSequence = 0;
 
     const renderGeneral = (): void => {
-      const birth = formatPartialDate(faithful.naissance_jour, faithful.naissance_mois, faithful.naissance_annee, faithful.naissance_precision);
-      const death = formatPartialDate(faithful.deces_jour, faithful.deces_mois, faithful.deces_annee, faithful.deces_precision);
+      const birth = formatPartialDate(faithfulRecord.naissance_jour, faithfulRecord.naissance_mois, faithfulRecord.naissance_annee, faithfulRecord.naissance_precision);
+      const death = formatPartialDate(faithfulRecord.deces_jour, faithfulRecord.deces_mois, faithfulRecord.deces_annee, faithfulRecord.deces_precision);
       contentEl.innerHTML = `
         <div class="grid gap-4 lg:grid-cols-2">
           <section class="page-card p-5"><h2 class="font-semibold text-slate-800">Identité</h2><div class="mt-4 grid gap-3 sm:grid-cols-2">
-            ${renderField("Prénom", faithful.prenom)}${renderField("Nom", faithful.nom)}${renderField("Sexe", faithful.sexe === "masculin" ? "Masculin" : "Féminin")}${renderField("Statut", faithful.statut === "decede" ? "Décédé" : "Vivant")}
-            ${renderField("Date de naissance", birth)}${renderField("Lieu de naissance", faithful.lieu_naissance)}
-            ${faithful.statut === "decede" ? renderField("Date de décès", death) : ""}
+            ${renderField("Prénom", faithfulRecord.prenom)}${renderField("Nom", faithfulRecord.nom)}${renderField("Sexe", faithfulRecord.sexe === "masculin" ? "Masculin" : "Féminin")}${renderField("Statut", faithfulRecord.statut === "decede" ? "Décédé" : "Vivant")}
+            ${renderField("Date de naissance", birth)}${renderField("Lieu de naissance", faithfulRecord.lieu_naissance)}
+            ${faithfulRecord.statut === "decede" ? renderField("Date de décès", death) : ""}
           </div></section>
           <section class="page-card p-5"><h2 class="font-semibold text-slate-800">Famille et appartenance</h2><div class="mt-4 grid gap-3 sm:grid-cols-2">
-            ${renderField("Nom du père", faithful.nom_pere)}${renderField("Nom de la mère", faithful.nom_mere)}
+            ${renderField("Nom du père", faithfulRecord.nom_pere)}${renderField("Nom de la mère", faithfulRecord.nom_mere)}
             ${renderField("Quartier", quartierName)}${renderField("Communauté actuelle", community?.nom ?? "—")}
-            ${renderField("Depuis le", faithful.communaute_depuis)}
+            ${renderField("Depuis le", faithfulRecord.communaute_depuis)}
           </div></section>
         </div>`;
     };
@@ -412,8 +413,8 @@ export async function mountFaithfulProfile(
           let communitiesForForm: {id:string;nom:string}[] = [];
           if (canWrite) {
             const [yearsResult, communitiesResult] = await Promise.all([
-              supabase.from("annees_pastorales").select("id,libelle,date_debut,active").eq("paroisse_id",faithful.paroisse_id).order("date_debut",{ascending:false}),
-              supabase.from("communautes").select("id,nom").eq("paroisse_id",faithful.paroisse_id).order("nom")
+              supabase.from("annees_pastorales").select("id,libelle,date_debut,active").eq("paroisse_id",faithfulRecord.paroisse_id).order("date_debut",{ascending:false}),
+              supabase.from("communautes").select("id,nom").eq("paroisse_id",faithfulRecord.paroisse_id).order("nom")
             ]);
             if (yearsResult.error) throw yearsResult.error;
             if (communitiesResult.error) throw communitiesResult.error;
@@ -424,8 +425,6 @@ export async function mountFaithfulProfile(
             );
             const yearOptions = yearsForForm.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.libelle)}</option>`).join("");
             const communityOptions = communitiesForForm.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.nom)}</option>`).join("");
-            const defaultYear = yearsResult.data.find((item) => item.id === activeYear?.id)?.id ?? yearsResult.data.find((item) => item.active)?.id ?? yearsResult.data[0]?.id ?? "";
-            const defaultCommunity = communitiesResult.data.some((item) => item.id === faithful.communaute_id) ? faithful.communaute_id : communitiesResult.data[0]?.id ?? "";
             editorHtml = `
               <section class="page-card p-5">
                 <h2 class="font-semibold text-slate-800">Ajouter un sacrement</h2>
@@ -469,7 +468,7 @@ export async function mountFaithfulProfile(
             const yearOptionsData = yearsForForm;
             const communityOptionsData = communitiesForForm;
             yearSelect.value = yearOptionsData.some((item)=>item.id===activeYear?.id) ? activeYear!.id : yearOptionsData.find((item)=>item.active)?.id ?? yearOptionsData[0]?.id ?? "";
-            communitySelect.value = communityOptionsData.some((item)=>item.id===faithful.communaute_id) ? faithful.communaute_id : communityOptionsData[0]?.id ?? "";
+            communitySelect.value = communityOptionsData.some((item)=>item.id===faithfulRecord.communaute_id) ? faithfulRecord.communaute_id : communityOptionsData[0]?.id ?? "";
             addForm.addEventListener("submit",async(event)=>{
               event.preventDefault();
               const formFeedback=addForm.querySelector<HTMLElement>("#add-sacrament-feedback")!;
@@ -485,8 +484,8 @@ export async function mountFaithfulProfile(
                 const selectedType=String(values.get("type"));
                 if(selectedType!=="eucharistie"&&selectedType!=="confirmation")throw new Error("Type de sacrement invalide.");
                 const {error:insertError}=await supabase.from("sacrements").insert({
-                  fidele_id:faithful.id,
-                  paroisse_id:faithful.paroisse_id,
+                  fidele_id:faithfulRecord.id,
+                  paroisse_id:faithfulRecord.paroisse_id,
                   type:selectedType,
                   annee_pastorale_id:String(values.get("annee")),
                   communaute_historique_id:String(values.get("communaute")),
