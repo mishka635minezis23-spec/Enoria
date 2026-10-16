@@ -11,9 +11,9 @@ export default defineConfig({
       includeAssets: ["icon.svg", "icon-192.png", "icon-512.png"],
       manifest: {
         id: "/",
-        name: "Enoria — Notre Dame d'Afrique",
+        name: "Enoria — Registre paroissial",
         short_name: "Enoria",
-        description: "Registre numérique des sacrements de la paroisse Notre Dame d'Afrique.",
+        description: "Application de gestion des registres sacramentels paroissiaux.",
         lang: "fr",
         start_url: "/",
         scope: "/",
