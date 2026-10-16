@@ -549,15 +549,136 @@ export async function mountFaithfulProfile(
             contentEl.innerHTML = '<section class="page-card p-5 text-sm text-slate-500">Les demandes et duplicatas sont réservés à la secrétaire et au curé.</section>';
             return;
           }
-          const { data, error } = await supabase.from("certificats").select("*").eq("fidele_id", faithfulId).order("date_demande", { ascending: false });
+          const [certificateResult, recordResult] = await Promise.all([
+            supabase.from("certificats").select("*").eq("fidele_id", faithfulRecord.id).order("date_demande", { ascending: false }),
+            supabase.from("sacrements").select("id,type,jour,mois,annee,precision,lieu,numero_acte,page_registre,ministre").eq("fidele_id", faithfulRecord.id)
+          ]);
           if (sequence !== tabSequence) return;
-          if (error) throw error;
-          const statusLabels: Record<string, string> = { attente: "En attente", valide: "Validé", refuse: "Refusé", emis: "Émis" };
-          const html = (data ?? []).map((item) => `
-            <article class="rounded-xl border border-slate-100 p-4"><div class="flex flex-wrap items-center justify-between gap-2"><h3 class="font-semibold text-slate-800">Duplicata n° ${item.numero_duplicata}</h3><span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-600">${statusLabels[item.statut] ?? item.statut}</span></div>
-            <p class="mt-2 text-xs text-slate-500">Demande : ${escapeHtml(item.date_demande)} · Validation : ${escapeHtml(item.date_validation ?? "—")} · Émission : ${escapeHtml(item.date_emission ?? "—")}</p>
-            ${item.motif_refus ? `<p class="mt-1 text-xs text-rose-600">Motif du refus : ${escapeHtml(item.motif_refus)}</p>` : ""}</article>`).join("");
-          contentEl.innerHTML = `<section class="page-card p-5"><h2 class="font-semibold text-slate-800">Demandes de duplicata</h2><div class="mt-4 space-y-3">${html || '<p class="text-sm text-slate-400">Aucune demande de duplicata.</p>'}</div></section>`;
+          if (certificateResult.error) throw certificateResult.error;
+          if (recordResult.error) throw recordResult.error;
+          const certificates = certificateResult.data ?? [];
+          const sacramentRecords = recordResult.data ?? [];
+          const isPriest = context.roles.includes("cure");
+          const statusLabels: Record<string, string> = { attente: "En attente", valide: "Validé par le curé", refuse: "Refusé", emis: "Duplicata émis" };
+          const requestHtml = sacramentRecords.map((record) => {
+            const pending = certificates.some((item) => item.sacrement_id === record.id && item.statut === "attente");
+            const label = record.type === "bapteme" ? "Baptême" : record.type === "eucharistie" ? "Eucharistie" : "Confirmation";
+            return `<div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 py-3"><div><p class="text-sm font-medium text-slate-800">${label}</p><p class="mt-1 text-xs text-slate-500">Acte ${escapeHtml(record.numero_acte ?? "—")} · Page ${escapeHtml(record.page_registre ?? "—")}</p></div>${pending ? '<span class="text-xs text-amber-700">Demande en attente</span>' : `<button type="button" data-request-duplicata="${escapeHtml(record.id)}" class="rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-800">Demander un duplicata</button>`}</div>`;
+          }).join("");
+          const certificateHtml = certificates.map((item) => {
+            let actions = "";
+            if (item.statut === "attente" && isPriest) {
+              actions = `<div class="mt-3 flex flex-wrap gap-2"><button type="button" data-approve-cert="${item.id}" class="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white">Valider</button><button type="button" data-reject-cert="${item.id}" class="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700">Refuser</button></div>`;
+            } else if (item.statut === "valide" && isPriest) {
+              actions = `<button type="button" data-emit-cert="${item.id}" class="mt-3 rounded-lg bg-[var(--enoria-green)] px-3 py-2 text-xs font-semibold text-white">Générer le PDF et émettre</button>`;
+            } else if (item.statut === "emis") {
+              actions = `<button type="button" data-download-cert="${item.id}" class="mt-3 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700">Télécharger à nouveau le PDF</button>`;
+            } else if (item.statut === "valide") {
+              actions = '<p class="mt-2 text-xs text-emerald-700">Validé. L’émission du PDF est réservée au curé.</p>';
+            } else if (item.statut === "attente") {
+              actions = '<p class="mt-2 text-xs text-amber-700">En attente de validation du curé.</p>';
+            }
+            return `<article class="rounded-xl border border-slate-100 p-4"><div class="flex flex-wrap items-center justify-between gap-2"><h3 class="font-semibold text-slate-800">Duplicata n° ${item.numero_duplicata}</h3><span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-600">${statusLabels[item.statut] ?? item.statut}</span></div><p class="mt-2 text-xs text-slate-500">Demande : ${escapeHtml(item.date_demande)} · Validation : ${escapeHtml(item.date_validation ?? "—")} · Émission : ${escapeHtml(item.date_emission ?? "—")}</p>${item.motif_refus ? `<p class="mt-1 text-xs text-rose-600">Motif du refus : ${escapeHtml(item.motif_refus)}</p>` : ""}${actions}</article>`;
+          }).join("");
+          contentEl.innerHTML = `
+            <div class="space-y-4">
+              <section class="page-card p-5"><h2 class="font-semibold text-slate-800">Demander un duplicata</h2><p class="mt-1 text-xs leading-5 text-slate-500">La demande est enregistrée dans la base et doit être validée par le curé avant toute émission.</p><div class="mt-3">${requestHtml || '<p class="text-sm text-slate-400">Aucun sacrement disponible pour demander un duplicata.</p>'}</div></section>
+              <section class="page-card p-5"><h2 class="font-semibold text-slate-800">Suivi des demandes</h2><div class="mt-4 space-y-3">${certificateHtml || '<p class="text-sm text-slate-400">Aucune demande de duplicata.</p>'}</div></section>
+              <p id="certificate-action-feedback" class="hidden rounded-lg p-3 text-sm" role="status"></p>
+            </div>`;
+
+          const actionFeedback = contentEl.querySelector<HTMLElement>("#certificate-action-feedback")!;
+          const showActionError = (error: unknown): void => {
+            actionFeedback.textContent = error instanceof Error ? error.message : "Action impossible.";
+            actionFeedback.className = "rounded-lg bg-rose-50 p-3 text-sm text-rose-700";
+          };
+          contentEl.querySelectorAll<HTMLButtonElement>("[data-request-duplicata]").forEach((button) => {
+            button.addEventListener("click", async () => {
+              button.disabled = true;
+              try {
+                const { error: rpcError } = await supabase.rpc("demander_duplicata", { p_sacrement: button.dataset.requestDuplicata! });
+                if (rpcError) throw rpcError;
+                await renderTab("documents");
+              } catch (error) {
+                showActionError(error);
+                button.disabled = false;
+              }
+            });
+          });
+          contentEl.querySelectorAll<HTMLButtonElement>("[data-approve-cert]").forEach((button) => {
+            button.addEventListener("click", async () => {
+              button.disabled = true;
+              try {
+                const { error: rpcError } = await supabase.rpc("decider_duplicata", { p_certificat: button.dataset.approveCert!, p_accepter: true });
+                if (rpcError) throw rpcError;
+                await renderTab("documents");
+              } catch (error) {
+                showActionError(error);
+                button.disabled = false;
+              }
+            });
+          });
+          contentEl.querySelectorAll<HTMLButtonElement>("[data-reject-cert]").forEach((button) => {
+            button.addEventListener("click", async () => {
+              const reason = window.prompt("Indique le motif du refus :");
+              if (reason === null) return;
+              if (!reason.trim()) {
+                showActionError(new Error("Le motif du refus est obligatoire."));
+                return;
+              }
+              button.disabled = true;
+              try {
+                const { error: rpcError } = await supabase.rpc("decider_duplicata", { p_certificat: button.dataset.rejectCert!, p_accepter: false, p_motif: reason.trim() });
+                if (rpcError) throw rpcError;
+                await renderTab("documents");
+              } catch (error) {
+                showActionError(error);
+                button.disabled = false;
+              }
+            });
+          });
+          const emitPdf = async (certificateId: string, markAsEmitted: boolean): Promise<void> => {
+            const certificate = certificates.find((item) => item.id === certificateId);
+            if (!certificate) throw new Error("Demande de duplicata introuvable.");
+            const record = sacramentRecords.find((item) => item.id === certificate.sacrement_id);
+            if (!record) throw new Error("Le sacrement source est introuvable.");
+            const labels: Record<string,string> = { bapteme:"Baptême", eucharistie:"Eucharistie", confirmation:"Confirmation" };
+            const config = getAppConfig();
+            const bytes = await createCertificatePdf({
+              parishName: config.parishName,
+              dioceseName: config.dioceseName,
+              faithfulName: `${faithfulRecord.prenom} ${faithfulRecord.nom}`,
+              sacramentLabel: labels[record.type] ?? record.type,
+              dateText: formatPartialDate(record.jour,record.mois,record.annee,record.precision),
+              place: record.lieu ?? "",
+              actNumber: record.numero_acte ?? "",
+              pageNumber: record.page_registre ?? "",
+              minister: record.ministre ?? "",
+              duplicateNumber: certificate.numero_duplicata,
+              emittedDate: new Intl.DateTimeFormat("fr-CD",{dateStyle:"long"}).format(new Date())
+            });
+            if (markAsEmitted) {
+              const { error: emitError } = await supabase.rpc("marquer_certificat_emis", { p_certificat: certificateId });
+              if (emitError) throw emitError;
+            }
+            const filePart = `${faithfulRecord.nom}-${faithfulRecord.prenom}`.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Za-z0-9-]/g,"-");
+            downloadCertificatePdf(bytes,`Enoria-duplicata-${certificate.numero_duplicata}-${filePart}.pdf`);
+            if (markAsEmitted) await renderTab("documents");
+          };
+          contentEl.querySelectorAll<HTMLButtonElement>("[data-emit-cert]").forEach((button) => {
+            button.addEventListener("click", async () => {
+              button.disabled = true;
+              try { await emitPdf(button.dataset.emitCert!,true); }
+              catch (error) { showActionError(error); button.disabled = false; }
+            });
+          });
+          contentEl.querySelectorAll<HTMLButtonElement>("[data-download-cert]").forEach((button) => {
+            button.addEventListener("click", async () => {
+              button.disabled = true;
+              try { await emitPdf(button.dataset.downloadCert!,false); }
+              catch (error) { showActionError(error); button.disabled = false; }
+            });
+          });
         }
       } catch (error) {
         if (sequence !== tabSequence) return;
