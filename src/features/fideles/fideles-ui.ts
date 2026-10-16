@@ -57,6 +57,19 @@ export function mountFaithfulList(container: HTMLElement): void {
   const next = container.querySelector<HTMLButtonElement>("#faithful-next");
   if (!form || !search || !quartierSelect || !communitySelect || !sexSelect || !statusSelect || !rowsNode || !feedback || !countNode || !pageNode || !previous || !next) return;
 
+  const formEl = form!;
+  const searchEl = search!;
+  const quartierSelectEl = quartierSelect!;
+  const communitySelectEl = communitySelect!;
+  const sexSelectEl = sexSelect!;
+  const statusSelectEl = statusSelect!;
+  const rowsNodeEl = rowsNode!;
+  const feedbackEl = feedback!;
+  const countNodeEl = countNode!;
+  const pageNodeEl = pageNode!;
+  const previousEl = previous!;
+  const nextEl = next!;
+
   const params = readListParams();
   search.value = params.get("q") ?? "";
   quartierSelect.value = params.get("quartier") ?? "";
@@ -134,7 +147,8 @@ export function mountFaithfulList(container: HTMLElement): void {
 
       if (term) query = query.or(`prenom.ilike.%${term}%,nom.ilike.%${term}%`);
       if (current.get("sexe")) query = query.eq("sexe", current.get("sexe")!);
-      if (current.get("statut")) query = query.eq("statut", current.get("statut")!);
+      const selectedStatus = current.get("statut");
+      if (selectedStatus === "vivant" || selectedStatus === "decede") query = query.eq("statut", selectedStatus);
       if (current.get("communaute")) {
         query = query.eq("communaute_id", current.get("communaute")!);
       } else if (current.get("quartier")) {
@@ -258,6 +272,9 @@ export async function mountFaithfulProfile(
   const contentNode = container.querySelector<HTMLElement>("#profile-content");
   const feedback = container.querySelector<HTMLElement>("#profile-feedback");
   if (!nameNode || !subtitleNode || !contentNode || !feedback) return;
+  const nameEl = nameNode!;
+  const subtitleEl = subtitleNode!;
+  const contentEl = contentNode!;
 
   const supabase = getSupabaseClient();
   try {
