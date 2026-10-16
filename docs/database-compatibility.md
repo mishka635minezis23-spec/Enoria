@@ -24,15 +24,21 @@ Toutes les tables publiques examinées ont RLS activé. Les rôles existants son
 - Écriture des sacrements : secrétaire/curé. Le responsable de communauté a une politique de lecture, pas d'écriture.
 - Dîmes : lecture et écriture secrétaire/curé.
 - Mentions du livret : écriture via la fonction `synchroniser_mention_livret`.
-- Duplicatas : fonctions `demander_duplicata`, `decider_duplicata` et `marquer_certificat_emis`, avec contrôles de rôle dans les fonctions examinées.
+- Duplicatas : fonctions `demander_duplicata`, `decider_duplicata` et `marquer_certificat_emis`, avec contrôles de rôle dans les fonctions examinées. L'application passe par ces RPC ; aucun INSERT direct dans `certificats`.
+- Dîmes : la contrainte unique `(fidele_id, annee_pastorale_id)` permet une seule ligne par fidèle et par année ; l'interface utilise un upsert protégé par RLS.
+- Sacrements : l'interface permet l'ajout d'Eucharistie et de Confirmation pour secrétaire/curé. Elle impose l'acte et la page ; la contrainte SQL existante les vérifie lorsque `reference_registre_requise=true`.
 - Transfert de communauté : fonction `transferer_fidele`, réservée au secrétaire/curé et limitée à une communauté de la même paroisse.
 
 ## Blocages fonctionnels à résoudre avant les écrans d'écriture
 
 1. **Quartiers et communautés** : seules des politiques SELECT ont été observées. Les actions créer/modifier/désactiver ne doivent pas être activées dans l'interface avant qu'une voie d'écriture sûre soit approuvée et mise en place.
 2. **Création fidèle + baptême atomique** : aucune fonction transactionnelle dédiée n'a été trouvée lors de l'inventaire. Les politiques actuelles permettent à un responsable de communauté d'insérer un fidèle, mais pas le sacrement correspondant. Deux appels client séparés ne garantissent pas l'atomicité. Il faudra une fonction transactionnelle contrôlée côté base ou restreindre le parcours à un rôle autorisé ; aucune de ces options ne sera appliquée sans validation.
-3. **Certificats** : la table ne présente qu'une politique de lecture dans l'inventaire. L'interface devra passer par les fonctions RPC prévues, jamais par un INSERT direct.
-4. **Profil et comptes** : le profil utilisateur est créé par un trigger depuis Auth ; les affectations de rôle sont gérées séparément. L'interface ne doit jamais déduire un rôle de `user_metadata`.
+3. **Mariages** : `evenements_matrimoniaux` ne possède pas de contrainte imposant le numéro d'acte et la page du registre. L'écriture des événements matrimoniaux reste donc désactivée dans l'interface, même si le formulaire pourrait les demander.
+4. **Duplicatas de mariage** : les RPC de duplicata acceptent un identifiant de `sacrements`, et la table `certificats` référence `sacrements`. Le parcours de duplicata pour un événement matrimonial nécessite une évolution du modèle et une fonction RPC dédiée.
+5. **Création fidèle + baptême atomique** : aucune fonction transactionnelle dédiée n'a été trouvée lors de l'inventaire. Les politiques actuelles permettent l'insertion d'un fidèle selon le rôle et la communauté, mais deux appels client séparés ne garantissent pas l'atomicité. Le bouton d'inscription reste désactivé jusqu'à une fonction transactionnelle contrôlée côté base.
+6. **Modification de la carte de baptême** : la modification de l'identité et du baptême touche deux tables. L'interface la laisse désactivée jusqu'à une fonction atomique afin d'éviter une mise à jour partielle.
+7. **Organisation** : les quartiers et communautés restent en lecture seule, faute de politiques d'écriture observées.
+8. **Profil et comptes** : le profil utilisateur est créé par un trigger depuis Auth ; les affectations de rôle sont gérées séparément. L'interface ne déduit jamais un rôle de `user_metadata`.
 
 ## Alertes de l'analyse Supabase
 
@@ -42,6 +48,17 @@ L'analyse de sécurité a signalé :
 - des alertes de performance : clés étrangères sans index couvrant, certaines expressions Auth réévaluées par ligne et politiques permissives multiples.
 
 Les vues statistiques examinées utilisent `security_invoker=true`, ce qui est le comportement attendu pour ne pas contourner les politiques RLS.
+
+## Fonctionnalités déjà branchées à la base
+
+- Connexion Supabase Auth par mot de passe, chargement du profil et des affectations actives.
+- Navigation filtrée par rôle ; RLS reste la protection réelle.
+- Tableau de bord et statistiques calculés depuis les vues existantes.
+- Liste et fiche du fidèle, avec les cinq onglets prévus.
+- Ajout d'Eucharistie et de Confirmation via INSERT contrôlé par RLS et contraintes existantes.
+- Dîmes via upsert sur la contrainte unique.
+- Demande, décision et émission de duplicata via les RPC auditées ; PDF généré localement après validation du curé. Aucun PDF ni scan n'est envoyé ou stocké dans Supabase.
+- Exports CSV filtrés par les permissions RLS.
 
 ## Règle de développement
 
