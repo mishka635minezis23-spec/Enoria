@@ -71,41 +71,41 @@ export function mountFaithfulList(container: HTMLElement): void {
   const nextEl = next!;
 
   const params = readListParams();
-  search.value = params.get("q") ?? "";
-  quartierSelect.value = params.get("quartier") ?? "";
-  communitySelect.value = params.get("communaute") ?? "";
-  sexSelect.value = params.get("sexe") ?? "";
-  statusSelect.value = params.get("statut") ?? "";
+  searchEl.value = params.get("q") ?? "";
+  quartierSelectEl.value = params.get("quartier") ?? "";
+  communitySelectEl.value = params.get("communaute") ?? "";
+  sexSelectEl.value = params.get("sexe") ?? "";
+  statusSelectEl.value = params.get("statut") ?? "";
 
   let communities: Pick<Community, "id" | "nom" | "quartier_id">[] = [];
   let quartiers: Pick<Quartier, "id" | "nom">[] = [];
   let requestSequence = 0;
 
   function syncOptions(): void {
-    const selectedQuartier = quartierSelect.value;
-    const selectedCommunity = communitySelect.value;
-    quartierSelect.innerHTML = '<option value="">Tous les quartiers</option>' +
+    const selectedQuartier = quartierSelectEl.value;
+    const selectedCommunity = communitySelectEl.value;
+    quartierSelectEl.innerHTML = '<option value="">Tous les quartiers</option>' +
       quartiers.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.nom)}</option>`).join("");
-    communitySelect.innerHTML = '<option value="">Toutes les communautés</option>' +
+    communitySelectEl.innerHTML = '<option value="">Toutes les communautés</option>' +
       communities
         .filter((item) => !selectedQuartier || item.quartier_id === selectedQuartier)
         .map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.nom)}</option>`)
         .join("");
-    quartierSelect.value = selectedQuartier;
-    communitySelect.value = selectedCommunity;
-    if (communitySelect.value && ![...communitySelect.options].some((option) => option.value === communitySelect.value)) {
-      communitySelect.value = "";
+    quartierSelectEl.value = selectedQuartier;
+    communitySelectEl.value = selectedCommunity;
+    if (communitySelectEl.value && ![...communitySelectEl.options].some((option) => option.value === communitySelectEl.value)) {
+      communitySelectEl.value = "";
     }
   }
 
   function persistFilters(resetPage: boolean): void {
     const nextParams = new URLSearchParams();
-    const term = safeSearchTerm(search.value);
+    const term = safeSearchTerm(searchEl.value);
     if (term) nextParams.set("q", term);
-    if (quartierSelect.value) nextParams.set("quartier", quartierSelect.value);
-    if (communitySelect.value) nextParams.set("communaute", communitySelect.value);
-    if (sexSelect.value) nextParams.set("sexe", sexSelect.value);
-    if (statusSelect.value) nextParams.set("statut", statusSelect.value);
+    if (quartierSelectEl.value) nextParams.set("quartier", quartierSelectEl.value);
+    if (communitySelectEl.value) nextParams.set("communaute", communitySelectEl.value);
+    if (sexSelectEl.value) nextParams.set("sexe", sexSelectEl.value);
+    if (statusSelectEl.value) nextParams.set("statut", statusSelectEl.value);
     const currentPage = resetPage ? 1 : Math.max(1, Number(readListParams().get("page") ?? "1"));
     if (currentPage > 1) nextParams.set("page", String(currentPage));
     writeListParams(nextParams);
@@ -117,12 +117,12 @@ export function mountFaithfulList(container: HTMLElement): void {
     const page = Math.max(1, Number(current.get("page") ?? "1"));
     const from = (page - 1) * PAGE_SIZE;
     const term = safeSearchTerm(current.get("q") ?? "");
-    feedback.classList.add("hidden");
-    rowsNode.innerHTML = '<tr><td colspan="7" class="px-3 py-12 text-center text-sm text-slate-400">Chargement du registre…</td></tr>';
-    previous.disabled = true;
-    next.disabled = true;
-    countNode.textContent = "Chargement…";
-    pageNode.textContent = `Page ${page}`;
+    feedbackEl.classList.add("hidden");
+    rowsNodeEl.innerHTML = '<tr><td colspan="7" class="px-3 py-12 text-center text-sm text-slate-400">Chargement du registre…</td></tr>';
+    previousEl.disabled = true;
+    nextEl.disabled = true;
+    countNodeEl.textContent = "Chargement…";
+    pageNodeEl.textContent = `Page ${page}`;
 
     try {
       const supabase = getSupabaseClient();
@@ -156,10 +156,10 @@ export function mountFaithfulList(container: HTMLElement): void {
           .filter((item) => item.quartier_id === current.get("quartier"))
           .map((item) => item.id);
         if (communityIds.length === 0) {
-          rowsNode.innerHTML = '<tr><td colspan="7" class="px-3 py-12 text-center text-sm text-slate-400">Aucun fidèle dans ce quartier.</td></tr>';
-          countNode.textContent = "0 résultat";
-          previous.disabled = page <= 1;
-          next.disabled = true;
+          rowsNodeEl.innerHTML = '<tr><td colspan="7" class="px-3 py-12 text-center text-sm text-slate-400">Aucun fidèle dans ce quartier.</td></tr>';
+          countNodeEl.textContent = "0 résultat";
+          previousEl.disabled = page <= 1;
+          nextEl.disabled = true;
           return;
         }
         query = query.in("communaute_id", communityIds);
@@ -173,9 +173,9 @@ export function mountFaithfulList(container: HTMLElement): void {
       const communityMap = new Map(communities.map((item) => [item.id, item]));
       const quartierMap = new Map(quartiers.map((item) => [item.id, item]));
       if (data.length === 0) {
-        rowsNode.innerHTML = '<tr><td colspan="7" class="px-3 py-12 text-center text-sm text-slate-400">Aucun fidèle ne correspond à cette recherche.</td></tr>';
+        rowsNodeEl.innerHTML = '<tr><td colspan="7" class="px-3 py-12 text-center text-sm text-slate-400">Aucun fidèle ne correspond à cette recherche.</td></tr>';
       } else {
-        rowsNode.innerHTML = data.map((item, index) => {
+        rowsNodeEl.innerHTML = data.map((item, index) => {
           const community = communityMap.get(item.communaute_id);
           const quartier = community ? quartierMap.get(community.quartier_id) : undefined;
           const sexLabel = item.sexe === "masculin" ? "Masculin" : item.sexe === "feminin" ? "Féminin" : "Non précisé";
@@ -192,41 +192,41 @@ export function mountFaithfulList(container: HTMLElement): void {
           </tr>`;
         }).join("");
       }
-      countNode.textContent = `${total.toLocaleString("fr-CD")} fidèle(s)`;
-      pageNode.textContent = `Page ${page}`;
-      previous.disabled = page <= 1;
-      next.disabled = from + data.length >= total;
+      countNodeEl.textContent = `${total.toLocaleString("fr-CD")} fidèle(s)`;
+      pageNodeEl.textContent = `Page ${page}`;
+      previousEl.disabled = page <= 1;
+      nextEl.disabled = from + data.length >= total;
     } catch (error) {
       if (sequence !== requestSequence) return;
-      rowsNode.innerHTML = '<tr><td colspan="7" class="px-3 py-12 text-center text-sm text-rose-600">Impossible de charger le registre.</td></tr>';
-      setFeedback(feedback, error instanceof Error ? error.message : "Erreur de lecture du registre.", "error");
-      feedback.classList.remove("hidden");
-      countNode.textContent = "Registre indisponible";
+      rowsNodeEl.innerHTML = '<tr><td colspan="7" class="px-3 py-12 text-center text-sm text-rose-600">Impossible de charger le registre.</td></tr>';
+      setFeedback(feedbackEl, error instanceof Error ? error.message : "Erreur de lecture du registre.", "error");
+      feedbackEl.classList.remove("hidden");
+      countNodeEl.textContent = "Registre indisponible";
     }
   }
 
-  form.addEventListener("submit", (event) => {
+  formEl.addEventListener("submit", (event) => {
     event.preventDefault();
     persistFilters(true);
     void loadRows();
   });
-  for (const select of [quartierSelect, communitySelect, sexSelect, statusSelect]) {
+  for (const select of [quartierSelectEl, communitySelectEl, sexSelectEl, statusSelectEl]) {
     select.addEventListener("change", () => {
-      if (select === quartierSelect) {
-        communitySelect.value = "";
+      if (select === quartierSelectEl) {
+        communitySelectEl.value = "";
         syncOptions();
       }
       persistFilters(true);
       void loadRows();
     });
   }
-  previous.addEventListener("click", () => {
+  previousEl.addEventListener("click", () => {
     const current = readListParams();
     current.set("page", String(Math.max(1, Number(current.get("page") ?? "1") - 1)));
     writeListParams(current);
     void loadRows();
   });
-  next.addEventListener("click", () => {
+  nextEl.addEventListener("click", () => {
     const current = readListParams();
     current.set("page", String(Number(current.get("page") ?? "1") + 1));
     writeListParams(current);
@@ -295,8 +295,8 @@ export async function mountFaithfulProfile(
       if (!q.error && q.data) quartierName = q.data.nom;
     }
 
-    nameNode.textContent = `${faithful.prenom} ${faithful.nom}`;
-    subtitleNode.textContent = `${faithful.sexe === "masculin" ? "Masculin" : faithful.sexe === "feminin" ? "Féminin" : "Sexe non précisé"} · ${faithful.statut === "decede" ? "Décédé" : "Vivant"}`;
+    nameEl.textContent = `${faithful.prenom} ${faithful.nom}`;
+    subtitleEl.textContent = `${faithful.sexe === "masculin" ? "Masculin" : faithful.sexe === "feminin" ? "Féminin" : "Sexe non précisé"} · ${faithful.statut === "decede" ? "Décédé" : "Vivant"}`;
 
     const tabs = [...container.querySelectorAll<HTMLButtonElement>("[data-tab]")];
     let activeTab = "general";
@@ -305,7 +305,7 @@ export async function mountFaithfulProfile(
     const renderGeneral = (): void => {
       const birth = formatPartialDate(faithful.naissance_jour, faithful.naissance_mois, faithful.naissance_annee, faithful.naissance_precision);
       const death = formatPartialDate(faithful.deces_jour, faithful.deces_mois, faithful.deces_annee, faithful.deces_precision);
-      contentNode.innerHTML = `
+      contentEl.innerHTML = `
         <div class="grid gap-4 lg:grid-cols-2">
           <section class="page-card p-5"><h2 class="font-semibold text-slate-800">Identité</h2><div class="mt-4 grid gap-3 sm:grid-cols-2">
             ${renderField("Prénom", faithful.prenom)}${renderField("Nom", faithful.nom)}${renderField("Sexe", faithful.sexe === "masculin" ? "Masculin" : "Féminin")}${renderField("Statut", faithful.statut === "decede" ? "Décédé" : "Vivant")}
@@ -333,7 +333,7 @@ export async function mountFaithfulProfile(
         renderGeneral();
         return;
       }
-      contentNode.innerHTML = '<div class="page-card p-6 text-sm text-slate-500">Chargement de cet onglet…</div>';
+      contentEl.innerHTML = '<div class="page-card p-6 text-sm text-slate-500">Chargement de cet onglet…</div>';
       try {
         if (tab === "sacrements") {
           const [sacramentResult, marriageResult, mentionResult] = await Promise.all([
@@ -351,7 +351,7 @@ export async function mountFaithfulProfile(
           const marriageHtml = (marriageResult.error ? [] : marriageResult.data ?? []).map((item) => `
             <article class="rounded-xl border border-slate-100 p-4"><h3 class="font-semibold text-slate-800">Événement matrimonial : ${escapeHtml(item.type)}</h3><p class="mt-2 text-xs text-slate-500">${formatPartialDate(item.jour, item.mois, item.annee, item.precision)} · ${escapeHtml(item.lieu ?? "Lieu non renseigné")}</p><p class="mt-1 text-xs text-slate-500">Conjoint : ${escapeHtml(item.conjoint_nom ?? "—")} · Acte ${escapeHtml(item.numero_acte ?? "—")} · Page ${escapeHtml(item.page_registre ?? "—")}</p></article>`).join("");
           const mentionsHtml = (mentionResult.error ? [] : mentionResult.data ?? []).map((item) => `<li class="flex justify-between gap-3 py-2 text-xs"><span>${escapeHtml(item.type_mention)}</span><span class="text-slate-500">${escapeHtml(item.statut)}</span></li>`).join("");
-          contentNode.innerHTML = `
+          contentEl.innerHTML = `
             <div class="space-y-4"><section class="page-card p-5"><h2 class="font-semibold text-slate-800">Sacrements</h2><div class="mt-4 space-y-3">${sacramentsHtml || '<p class="text-sm text-slate-400">Aucun sacrement lisible pour ce dossier.</p>'}</div></section>
             <section class="page-card p-5"><h2 class="font-semibold text-slate-800">Événements matrimoniaux</h2><div class="mt-4 space-y-3">${marriageHtml || '<p class="text-sm text-slate-400">Aucun événement matrimonial lisible.</p>'}</div></section>
             <section class="page-card p-5"><h2 class="font-semibold text-slate-800">Mentions du livret</h2><ul class="mt-3 divide-y divide-slate-100">${mentionsHtml || '<li class="py-2 text-sm text-slate-400">Aucune mention enregistrée.</li>'}</ul></section></div>`;
@@ -367,13 +367,13 @@ export async function mountFaithfulProfile(
               <p class="mt-2 text-xs text-slate-500">Naissance : ${formatPartialDate(child.naissance_jour, child.naissance_mois, child.naissance_annee, child.naissance_precision)}</p>
               <p class="mt-1 text-xs text-slate-500">Baptême : ${formatPartialDate(child.bapteme_jour, child.bapteme_mois, child.bapteme_annee, child.bapteme_precision)} · Statut : ${escapeHtml(child.statut_bapteme)}</p>
               <p class="mt-1 text-xs text-slate-500">Confession : ${escapeHtml(child.confession)}</p></article>`).join("");
-          contentNode.innerHTML = `<section class="page-card p-5"><h2 class="font-semibold text-slate-800">Enfants</h2><div class="mt-4 space-y-3">${html || '<p class="text-sm text-slate-400">Aucun enfant enregistré dans ce dossier.</p>'}</div></section>`;
+          contentEl.innerHTML = `<section class="page-card p-5"><h2 class="font-semibold text-slate-800">Enfants</h2><div class="mt-4 space-y-3">${html || '<p class="text-sm text-slate-400">Aucun enfant enregistré dans ce dossier.</p>'}</div></section>`;
           return;
         }
 
         if (tab === "historique") {
           if (!context.roles.some((role) => role === "secretaire" || role === "cure")) {
-            contentNode.innerHTML = '<section class="page-card p-5 text-sm text-slate-500">L’historique des transferts est réservé à la secrétaire et au curé.</section>';
+            contentEl.innerHTML = '<section class="page-card p-5 text-sm text-slate-500">L’historique des transferts est réservé à la secrétaire et au curé.</section>';
             return;
           }
           const { data, error } = await supabase.from("historique_affectations_fideles").select("*").eq("fidele_id", faithfulId).order("date_debut", { ascending: false });
@@ -382,13 +382,13 @@ export async function mountFaithfulProfile(
           const html = (data ?? []).map((item) => `
             <article class="rounded-xl border border-slate-100 p-4"><p class="text-sm font-semibold text-slate-800">Changement de communauté</p>
             <p class="mt-2 text-xs text-slate-500">Du ${escapeHtml(item.date_debut)} au ${escapeHtml(item.date_fin ?? "en cours")} · Motif : ${escapeHtml(item.motif ?? "Non précisé")}</p></article>`).join("");
-          contentNode.innerHTML = `<section class="page-card p-5"><h2 class="font-semibold text-slate-800">Historique des affectations</h2><div class="mt-4 space-y-3">${html || '<p class="text-sm text-slate-400">Aucun transfert enregistré.</p>'}</div></section>`;
+          contentEl.innerHTML = `<section class="page-card p-5"><h2 class="font-semibold text-slate-800">Historique des affectations</h2><div class="mt-4 space-y-3">${html || '<p class="text-sm text-slate-400">Aucun transfert enregistré.</p>'}</div></section>`;
           return;
         }
 
         if (tab === "documents") {
           if (!context.roles.some((role) => role === "secretaire" || role === "cure")) {
-            contentNode.innerHTML = '<section class="page-card p-5 text-sm text-slate-500">Les demandes et duplicatas sont réservés à la secrétaire et au curé.</section>';
+            contentEl.innerHTML = '<section class="page-card p-5 text-sm text-slate-500">Les demandes et duplicatas sont réservés à la secrétaire et au curé.</section>';
             return;
           }
           const { data, error } = await supabase.from("certificats").select("*").eq("fidele_id", faithfulId).order("date_demande", { ascending: false });
@@ -399,11 +399,11 @@ export async function mountFaithfulProfile(
             <article class="rounded-xl border border-slate-100 p-4"><div class="flex flex-wrap items-center justify-between gap-2"><h3 class="font-semibold text-slate-800">Duplicata n° ${item.numero_duplicata}</h3><span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-600">${statusLabels[item.statut] ?? item.statut}</span></div>
             <p class="mt-2 text-xs text-slate-500">Demande : ${escapeHtml(item.date_demande)} · Validation : ${escapeHtml(item.date_validation ?? "—")} · Émission : ${escapeHtml(item.date_emission ?? "—")}</p>
             ${item.motif_refus ? `<p class="mt-1 text-xs text-rose-600">Motif du refus : ${escapeHtml(item.motif_refus)}</p>` : ""}</article>`).join("");
-          contentNode.innerHTML = `<section class="page-card p-5"><h2 class="font-semibold text-slate-800">Demandes de duplicata</h2><div class="mt-4 space-y-3">${html || '<p class="text-sm text-slate-400">Aucune demande de duplicata.</p>'}</div></section>`;
+          contentEl.innerHTML = `<section class="page-card p-5"><h2 class="font-semibold text-slate-800">Demandes de duplicata</h2><div class="mt-4 space-y-3">${html || '<p class="text-sm text-slate-400">Aucune demande de duplicata.</p>'}</div></section>`;
         }
       } catch (error) {
         if (sequence !== tabSequence) return;
-        contentNode.innerHTML = `<section class="page-card p-5 text-sm text-rose-700">${escapeHtml(error instanceof Error ? error.message : "Impossible de charger cet onglet.")}</section>`;
+        contentEl.innerHTML = `<section class="page-card p-5 text-sm text-rose-700">${escapeHtml(error instanceof Error ? error.message : "Impossible de charger cet onglet.")}</section>`;
       }
     }
 
@@ -411,8 +411,8 @@ export async function mountFaithfulProfile(
     renderGeneral();
     void renderTab(activeTab);
   } catch (error) {
-    nameNode.textContent = "Dossier indisponible";
-    subtitleNode.textContent = "Les informations ne sont pas accessibles avec ce compte.";
-    contentNode.innerHTML = `<section class="page-card p-5 text-sm text-rose-700">${escapeHtml(error instanceof Error ? error.message : "Impossible de charger le dossier.")}</section>`;
+    nameEl.textContent = "Dossier indisponible";
+    subtitleEl.textContent = "Les informations ne sont pas accessibles avec ce compte.";
+    contentEl.innerHTML = `<section class="page-card p-5 text-sm text-rose-700">${escapeHtml(error instanceof Error ? error.message : "Impossible de charger le dossier.")}</section>`;
   }
 }
