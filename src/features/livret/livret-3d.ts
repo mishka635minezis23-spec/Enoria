@@ -93,7 +93,8 @@ export async function mountLivret3D(container:HTMLElement,data:LivretData):Promi
     renderer.domElement.style.display="block";
     renderer.domElement.style.touchAction="none";
     stage.append(renderer.domElement);
-    canvasElement=renderer.domElement;
+    const canvas = renderer.domElement;
+    canvasElement=canvas;
 
     scene.add(new THREE.HemisphereLight("#ffffff","#9aa69c",2.1));
     const keyLight=new THREE.DirectionalLight("#ffffff",2.2);
@@ -163,13 +164,13 @@ export async function mountLivret3D(container:HTMLElement,data:LivretData):Promi
     let dragging=false;
     let previousX=0;
     let previousY=0;
-    onPointerDown=(event)=>{
+    const pointerDown=(event:PointerEvent)=>{
       dragging=true;
       previousX=event.clientX;
       previousY=event.clientY;
-      canvasElement!.setPointerCapture(event.pointerId);
+      canvas.setPointerCapture(event.pointerId);
     };
-    onPointerMove=(event)=>{
+    const pointerMove=(event:PointerEvent)=>{
       if(!dragging||!bookGroup)return;
       const dx=event.clientX-previousX;
       const dy=event.clientY-previousY;
@@ -179,11 +180,14 @@ export async function mountLivret3D(container:HTMLElement,data:LivretData):Promi
       bookGroup.rotation.x=Math.max(-0.45,Math.min(0.35,bookGroup.rotation.x+dy*0.004));
       render();
     };
-    onPointerUp=()=>{dragging=false;};
-    canvasElement.addEventListener("pointerdown",onPointerDown);
-    canvasElement.addEventListener("pointermove",onPointerMove);
-    canvasElement.addEventListener("pointerup",onPointerUp);
-    canvasElement.addEventListener("pointercancel",onPointerUp);
+    const pointerUp=()=>{dragging=false;};
+    onPointerDown=pointerDown;
+    onPointerMove=pointerMove;
+    onPointerUp=pointerUp;
+    canvas.addEventListener("pointerdown",pointerDown);
+    canvas.addEventListener("pointermove",pointerMove);
+    canvas.addEventListener("pointerup",pointerUp);
+    canvas.addEventListener("pointercancel",pointerUp);
     window.addEventListener("resize",render);
 
     return ()=>{
