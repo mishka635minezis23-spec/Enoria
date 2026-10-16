@@ -9,6 +9,7 @@ import { registerSW } from "virtual:pwa-register";
 
 const root = document.querySelector<HTMLDivElement>("#app");
 if (!root) throw new Error("Le conteneur principal #app est introuvable.");
+const appRoot: HTMLDivElement = root;
 
 function escapeHtml(value: string): string {
   const replacements: Record<string, string> = {
@@ -38,14 +39,14 @@ async function bootstrap(): Promise<void> {
   const config = getAppConfig();
 
   if (!hasSupabaseConfig(config)) {
-    renderSetupScreen(root, config, () => window.location.reload());
+    renderSetupScreen(appRoot, config, () => window.location.reload());
     return;
   }
 
   try {
     const context = await loadUserContext();
     if (!context) {
-      renderLoginScreen(root, config, () => void bootstrap());
+      renderLoginScreen(appRoot, config, () => void bootstrap());
       return;
     }
     renderApplication(context);
@@ -54,7 +55,7 @@ async function bootstrap(): Promise<void> {
       ? error.message
       : "Connexion impossible. Vérifie le réseau et les paramètres Supabase.";
     try { await signOut(); } catch { /* La session sera revérifiée à la prochaine connexion. */ }
-    renderLoginScreen(root, config, () => void bootstrap(), message);
+    renderLoginScreen(appRoot, config, () => void bootstrap(), message);
   }
 }
 
@@ -78,7 +79,7 @@ function renderApplication(context: UserContext): void {
       </a>`)
     .join("");
 
-  root.innerHTML = `
+  appRoot.innerHTML = `
     <div id="enoria-shell" class="min-h-screen md:flex">
       <aside class="sidebar flex min-h-screen flex-col bg-[var(--enoria-deep)] text-white md:sticky md:top-0 md:h-screen md:w-64 md:shrink-0" id="sidebar" data-open="false">
         <div class="flex items-center gap-3 border-b border-white/10 px-5 py-5">
@@ -120,11 +121,11 @@ function renderApplication(context: UserContext): void {
       </div>
     </div>`;
 
-  const shell = root.querySelector<HTMLElement>("#enoria-shell")!;
-  const content = root.querySelector<HTMLElement>("#page-content")!;
-  const sidebar = root.querySelector<HTMLElement>("#sidebar")!;
-  const backdrop = root.querySelector<HTMLElement>("#sidebar-backdrop")!;
-  const dateNode = root.querySelector<HTMLElement>("#today");
+  const shell = appRoot.querySelector<HTMLElement>("#enoria-shell")!;
+  const content = appRoot.querySelector<HTMLElement>("#page-content")!;
+  const sidebar = appRoot.querySelector<HTMLElement>("#sidebar")!;
+  const backdrop = appRoot.querySelector<HTMLElement>("#sidebar-backdrop")!;
+  const dateNode = appRoot.querySelector<HTMLElement>("#today");
   if (dateNode) {
     dateNode.textContent = new Intl.DateTimeFormat(config.locale, { dateStyle: "full" }).format(new Date());
   }
