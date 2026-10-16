@@ -8,7 +8,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "prompt",
-      includeAssets: ["icon.svg"],
+      includeAssets: ["icon.svg", "icon-192.png", "icon-512.png"],
       manifest: {
         id: "/",
         name: "Enoria — Notre Dame d'Afrique",
@@ -21,7 +21,9 @@ export default defineConfig({
         background_color: APP_CONFIG.theme.surface,
         theme_color: APP_CONFIG.theme.primaryDark,
         icons: [
-          { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" }
+          { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+          { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+          { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }
         ]
       },
       workbox: {
