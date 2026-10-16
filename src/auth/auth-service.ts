@@ -57,10 +57,16 @@ export async function loadUserContext(): Promise<UserContext | null> {
   }
 
   const now = Date.now();
+  const isStillValid = (dateFin: string | null): boolean => {
+    if (!dateFin) return true;
+    const end = new Date(dateFin);
+    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(dateFin)) end.setUTCHours(23, 59, 59, 999);
+    return end.getTime() >= now;
+  };
   const assignments = assignmentResult.data.filter((item) =>
     item.active &&
     new Date(item.date_debut).getTime() <= now &&
-    (!item.date_fin || new Date(item.date_fin).getTime() >= now)
+    isStillValid(item.date_fin)
   );
   if (assignments.length === 0) {
     throw new Error("Aucun rôle paroissial actif n'est attribué à ce compte.");
