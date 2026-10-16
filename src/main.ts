@@ -6,6 +6,7 @@ import { getCurrentRoute, getFaithfulIdFromRoute, loadRouteContent, navigateTo, 
 import { mountFaithfulList, mountFaithfulProfile } from "./features/fideles/fideles-ui";
 import { mountDashboard } from "./features/dashboard/dashboard-ui";
 import { mountSacramentsPage } from "./features/sacrements/sacrements-ui";
+import { mountOrganisation } from "./features/organisation/organisation-ui";
 import { renderLoginScreen, renderSetupScreen } from "./ui/auth-screens";
 import { mountSettingsPage } from "./ui/settings";
 import { registerSW } from "virtual:pwa-register";
@@ -174,6 +175,8 @@ function renderApplication(context: UserContext, activePastoralYear: ActivePasto
       document.title = faithfulId ? "Fiche fidèle — Enoria" : `${ROUTES[route].label} — Enoria`;
       if (route === "parametres") {
         mountSettingsPage(content, context, () => window.location.reload());
+      } else if (route === "organisation") {
+        void mountOrganisation(content, context);
       } else if (route === "dashboard") {
         void mountDashboard(content, context, activePastoralYear);
       } else if (route === "sacrements") {
