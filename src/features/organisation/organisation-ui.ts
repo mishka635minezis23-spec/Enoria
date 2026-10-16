@@ -36,7 +36,7 @@ export async function mountOrganisation(container: HTMLElement, context: UserCon
           <ul class="px-5 pb-2">${children}</ul>
         </article>`;
     }).join("");
-    list.innerHTML = rows || '<div class="page-card p-8 text-center text-sm text-slate-400">Aucun quartier n'est enregistré.</div>';
+    list.innerHTML = rows || '<div class="page-card p-8 text-center text-sm text-slate-400">Aucun quartier n’est enregistré.</div>';
   } catch (error) {
     list.innerHTML = '<div class="page-card p-6 text-sm text-rose-700">Impossible de charger l’organisation paroissiale.</div>';
     feedback.textContent = error instanceof Error ? error.message : "Erreur de lecture.";
