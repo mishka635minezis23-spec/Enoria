@@ -46,7 +46,8 @@ function isForbiddenSecretKey(key: string): boolean {
   const parts = key.split(".");
   if (parts.length !== 3) return false;
   try {
-    const payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const payload = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
     const decoded = JSON.parse(atob(payload)) as { role?: string };
     return decoded.role === "service_role";
   } catch {
@@ -108,7 +109,7 @@ export function saveAppConfig(input: Partial<AppConfig>): AppConfig {
   if (!parishName) throw new Error("Le nom de la paroisse est obligatoire.");
   if (!url || !key) throw new Error("L'URL Supabase et la clé publique sont obligatoires.");
   if (isForbiddenSecretKey(key)) throw new Error("Clé refusée : ne saisis jamais une clé service_role ou sb_secret dans le navigateur.");
-  if (!isHexColor(next.theme.primary) || !isHexColor(next.theme.primaryDark)) {
+  if (!isHexColor(next.theme.primary) || !isHexColor(next.theme.primaryDark) || !isHexColor(next.theme.surface)) {
     throw new Error("Les couleurs doivent être au format hexadécimal #RRGGBB.");
   }
 
