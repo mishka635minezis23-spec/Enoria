@@ -298,7 +298,6 @@ export async function mountFaithfulProfile(
     subtitleEl.textContent = `${faithful.sexe === "masculin" ? "Masculin" : faithful.sexe === "feminin" ? "Féminin" : "Sexe non précisé"} · ${faithful.statut === "decede" ? "Décédé" : "Vivant"}`;
 
     const tabs = [...container.querySelectorAll<HTMLButtonElement>("[data-tab]")];
-    let activeTab = getFaithfulInitialTab();
     let tabSequence = 0;
 
     const renderGeneral = (): void => {
@@ -320,7 +319,6 @@ export async function mountFaithfulProfile(
     };
 
     async function renderTab(tab: string): Promise<void> {
-      activeTab = tab;
       const sequence = ++tabSequence;
       tabs.forEach((button) => {
         const selected = button.dataset.tab === tab;
@@ -407,7 +405,7 @@ export async function mountFaithfulProfile(
     }
 
     tabs.forEach((button) => button.addEventListener("click", () => void renderTab(button.dataset.tab ?? "general")));
-    void renderTab(activeTab);
+    void renderTab(getFaithfulInitialTab());
   } catch (error) {
     nameEl.textContent = "Dossier indisponible";
     subtitleEl.textContent = "Les informations ne sont pas accessibles avec ce compte.";
