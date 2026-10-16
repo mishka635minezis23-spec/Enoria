@@ -149,6 +149,8 @@ export async function mountStatistics(container:HTMLElement,context:UserContext,
             const birthAfterReference=person.naissance_mois>reference.getMonth()+1||
               (person.naissance_mois===reference.getMonth()+1&&person.naissance_jour>reference.getDate());
             if(birthAfterReference)age--;
+          }else if(person.naissance_precision==="mois"&&person.naissance_mois&&person.naissance_mois>reference.getMonth()+1){
+            age--;
           }
           if(age<0)continue;
           ageKnown++;
