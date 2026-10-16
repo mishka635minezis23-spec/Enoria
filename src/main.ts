@@ -188,7 +188,7 @@ function renderApplication(context: UserContext, activePastoralYear: ActivePasto
       } else if (route === "sacrements") {
         mountSacramentsPage(content);
       } else if (route === "fideles" && faithfulId) {
-        void mountFaithfulProfile(content, context, faithfulId);
+        void mountFaithfulProfile(content, context, faithfulId, activePastoralYear);
       } else if (route === "fideles") {
         mountFaithfulList(content);
       }
