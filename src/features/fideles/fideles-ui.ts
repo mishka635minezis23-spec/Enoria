@@ -5,7 +5,6 @@ import {
   getFaithfulListQuery,
   navigateBackFromFaithful,
   navigateToFaithful,
-  navigateToFaithfulList,
   updateFaithfulListQuery
 } from "../../router";
 
