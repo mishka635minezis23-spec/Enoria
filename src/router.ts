@@ -58,7 +58,7 @@ export function getFaithfulInitialTab(): FaithfulProfileTab {
 
 export function navigateToFaithful(id: string, tab: FaithfulProfileTab = "general"): void {
   const returnHash = window.location.hash || "#/fideles";
-  const params = new URLSearchParams({ return, tab });
+  const params = new URLSearchParams({ return: returnHash, tab });
   window.location.hash = `#/fideles/${encodeURIComponent(id)}?${params.toString()}`;
 }
 
