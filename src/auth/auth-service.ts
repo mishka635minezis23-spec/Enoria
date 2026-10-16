@@ -58,7 +58,9 @@ export async function loadUserContext(): Promise<UserContext | null> {
 
   const now = Date.now();
   const assignments = assignmentResult.data.filter((item) =>
-    item.active && (!item.date_fin || new Date(item.date_fin).getTime() >= now)
+    item.active &&
+    new Date(item.date_debut).getTime() <= now &&
+    (!item.date_fin || new Date(item.date_fin).getTime() >= now)
   );
   if (assignments.length === 0) {
     throw new Error("Aucun rôle paroissial actif n'est attribué à ce compte.");
