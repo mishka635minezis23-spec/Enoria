@@ -7,6 +7,7 @@ import { mountFaithfulList, mountFaithfulProfile } from "./features/fideles/fide
 import { mountDashboard } from "./features/dashboard/dashboard-ui";
 import { mountSacramentsPage } from "./features/sacrements/sacrements-ui";
 import { mountOrganisation } from "./features/organisation/organisation-ui";
+import { mountDimesPage } from "./features/dimes/dimes-ui";
 import { renderLoginScreen, renderSetupScreen } from "./ui/auth-screens";
 import { mountSettingsPage } from "./ui/settings";
 import { registerSW } from "virtual:pwa-register";
@@ -177,6 +178,8 @@ function renderApplication(context: UserContext, activePastoralYear: ActivePasto
         mountSettingsPage(content, context, () => window.location.reload());
       } else if (route === "organisation") {
         void mountOrganisation(content, context);
+      } else if (route === "dimes") {
+        void mountDimesPage(content, context, activePastoralYear);
       } else if (route === "dashboard") {
         void mountDashboard(content, context, activePastoralYear);
       } else if (route === "sacrements") {
