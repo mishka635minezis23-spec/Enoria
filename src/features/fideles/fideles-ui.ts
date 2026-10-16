@@ -3,7 +3,7 @@ import type { UserContext } from "../../auth/auth-service";
 import { getSupabaseClient } from "../../lib/supabase";
 import {
   getFaithfulListQuery,
-  getFaithfulReturnQuery,
+  navigateBackFromFaithful,
   navigateToFaithful,
   navigateToFaithfulList,
   updateFaithfulListQuery
@@ -265,8 +265,7 @@ export async function mountFaithfulProfile(
   context: UserContext,
   faithfulId: string
 ): Promise<void> {
-  const returnQuery = getFaithfulReturnQuery();
-  container.querySelector<HTMLButtonElement>("#faithful-back")?.addEventListener("click", () => navigateToFaithfulList(returnQuery));
+  container.querySelector<HTMLButtonElement>("#faithful-back")?.addEventListener("click", navigateBackFromFaithful);
   const nameNode = container.querySelector<HTMLElement>("#profile-name");
   const subtitleNode = container.querySelector<HTMLElement>("#profile-subtitle");
   const contentNode = container.querySelector<HTMLElement>("#profile-content");
