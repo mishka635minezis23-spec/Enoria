@@ -57,7 +57,7 @@ Les vues statistiques examinées utilisent `security_invoker=true`, ce qui est l
 - Liste et fiche du fidèle, avec les cinq onglets prévus.
 - Ajout d'Eucharistie et de Confirmation via INSERT contrôlé par RLS et contraintes existantes.
 - Dîmes via upsert sur la contrainte unique.
-- Demande, décision et émission de duplicata via les RPC auditées ; PDF généré localement après validation du curé. Aucun PDF ni scan n'est envoyé ou stocké dans Supabase.
+- Demande, décision et émission de duplicata via les RPC auditées ; PDF généré localement après validation du curé. Aucun PDF ni scan n'est envoyé ou stocké dans Supabase ; si le fichier émis est perdu, une nouvelle demande doit être créée afin de conserver la traçabilité.
 - Exports CSV filtrés par les permissions RLS.
 
 ## Règle de développement
