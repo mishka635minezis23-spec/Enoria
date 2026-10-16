@@ -9,6 +9,7 @@ import { mountSacramentsPage } from "./features/sacrements/sacrements-ui";
 import { mountOrganisation } from "./features/organisation/organisation-ui";
 import { mountDimesPage } from "./features/dimes/dimes-ui";
 import { mountStatistics } from "./features/statistiques/statistiques-ui";
+import { mountReports } from "./features/rapports/rapports-ui";
 import { renderLoginScreen, renderSetupScreen } from "./ui/auth-screens";
 import { mountSettingsPage } from "./ui/settings";
 import { registerSW } from "virtual:pwa-register";
@@ -183,6 +184,8 @@ function renderApplication(context: UserContext, activePastoralYear: ActivePasto
         void mountDimesPage(content, context, activePastoralYear);
       } else if (route === "statistiques") {
         void mountStatistics(content, context, activePastoralYear);
+      } else if (route === "rapports") {
+        void mountReports(content, context, activePastoralYear);
       } else if (route === "dashboard") {
         void mountDashboard(content, context, activePastoralYear);
       } else if (route === "sacrements") {
