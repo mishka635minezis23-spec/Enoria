@@ -597,13 +597,27 @@ export async function mountFaithfulProfile(
             contentEl.innerHTML = '<section class="page-card p-5 text-sm text-slate-500">L’historique des transferts est réservé à la secrétaire et au curé.</section>';
             return;
           }
-          const { data, error } = await supabase.from("historique_affectations_fideles").select("*").eq("fidele_id", faithfulId).order("date_debut", { ascending: false });
+          const [transferResult, actionResult] = await Promise.all([
+            supabase.from("historique_affectations_fideles").select("*").eq("fidele_id", faithfulRecord.id).order("date_debut", { ascending: false }),
+            supabase.from("historique_actions").select("action,table_cible,details,created_at,utilisateur_id").eq("fidele_id", faithfulRecord.id).order("created_at", { ascending: false })
+          ]);
           if (sequence !== tabSequence) return;
-          if (error) throw error;
-          const html = (data ?? []).map((item) => `
+          if (transferResult.error) throw transferResult.error;
+          if (actionResult.error) throw actionResult.error;
+          const communityIds = [...new Set((transferResult.data ?? []).flatMap((item) => [item.ancienne_communaute_id,item.nouvelle_communaute_id]).filter((id): id is string => Boolean(id)))];
+          const communityResult = communityIds.length
+            ? await supabase.from("communautes").select("id,nom").in("id",communityIds)
+            : { data: [], error: null };
+          if (communityResult.error) throw communityResult.error;
+          const communityNames = new Map((communityResult.data ?? []).map((item) => [item.id,item.nom]));
+          const transferHtml = (transferResult.data ?? []).map((item) => `
             <article class="rounded-xl border border-slate-100 p-4"><p class="text-sm font-semibold text-slate-800">Changement de communauté</p>
-            <p class="mt-2 text-xs text-slate-500">Du ${escapeHtml(item.date_debut)} au ${escapeHtml(item.date_fin ?? "en cours")} · Motif : ${escapeHtml(item.motif ?? "Non précisé")}</p></article>`).join("");
-          contentEl.innerHTML = `<section class="page-card p-5"><h2 class="font-semibold text-slate-800">Historique des affectations</h2><div class="mt-4 space-y-3">${html || '<p class="text-sm text-slate-400">Aucun transfert enregistré.</p>'}</div></section>`;
+            <p class="mt-2 text-xs text-slate-500">${escapeHtml(communityNames.get(item.ancienne_communaute_id ?? "") ?? "Origine inconnue")} → ${escapeHtml(communityNames.get(item.nouvelle_communaute_id) ?? "Destination inconnue")}</p>
+            <p class="mt-1 text-xs text-slate-500">Du ${escapeHtml(item.date_debut)} au ${escapeHtml(item.date_fin ?? "en cours")} · Motif : ${escapeHtml(item.motif ?? "Non précisé")}</p></article>`).join("");
+          const actionsHtml = (actionResult.data ?? []).map((item) => `
+            <article class="rounded-xl border border-slate-100 p-4"><div class="flex flex-wrap items-center justify-between gap-2"><p class="text-sm font-semibold text-slate-800">${escapeHtml(item.action)}</p><span class="text-xs text-slate-400">${escapeHtml(new Intl.DateTimeFormat("fr-CD",{dateStyle:"medium",timeStyle:"short"}).format(new Date(item.created_at)))}</span></div>
+            <p class="mt-1 text-xs text-slate-500">Table concernée : ${escapeHtml(item.table_cible)}</p><p class="mt-2 break-words text-xs text-slate-500">${escapeHtml(JSON.stringify(item.details))}</p></article>`).join("");
+          contentEl.innerHTML = `<div class="space-y-4"><section class="page-card p-5"><h2 class="font-semibold text-slate-800">Historique des affectations</h2><div class="mt-4 space-y-3">${transferHtml || '<p class="text-sm text-slate-400">Aucun transfert enregistré.</p>'}</div></section><section class="page-card p-5"><h2 class="font-semibold text-slate-800">Journal des actions</h2><div class="mt-4 space-y-3">${actionsHtml || '<p class="text-sm text-slate-400">Aucune action journalisée pour ce dossier.</p>'}</div></section></div>`;
           return;
         }
 
