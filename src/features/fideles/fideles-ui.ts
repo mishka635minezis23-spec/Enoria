@@ -260,6 +260,63 @@ function renderField(label: string, value: unknown): string {
   return `<div class="rounded-xl bg-slate-50 p-4"><p class="text-[11px] font-medium uppercase tracking-wide text-slate-400">${escapeHtml(label)}</p><p class="mt-1 text-sm font-medium text-slate-800">${escapeHtml(value || "—")}</p></div>`;
 }
 
+interface PartialDateValues {
+  precision: Precision;
+  jour: number | null;
+  mois: number | null;
+  annee: number | null;
+}
+
+function partialDateFields(prefix: string): string {
+  return `
+    <div class="grid gap-3 sm:grid-cols-4">
+      <label class="text-xs font-medium text-slate-600">Précision
+        <select id="${prefix}-precision" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm">
+          <option value="exacte">Date exacte</option><option value="mois">Mois et année</option><option value="annee">Année seulement</option><option value="inconnue">Inconnue</option>
+        </select>
+      </label>
+      <label class="text-xs font-medium text-slate-600">Jour<input id="${prefix}-day" type="number" min="1" max="31" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" /></label>
+      <label class="text-xs font-medium text-slate-600">Mois<input id="${prefix}-month" type="number" min="1" max="12" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" /></label>
+      <label class="text-xs font-medium text-slate-600">Année<input id="${prefix}-year" type="number" min="1800" max="2200" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" /></label>
+    </div>`;
+}
+
+function bindPartialDate(form: HTMLFormElement, prefix: string): void {
+  const precision = form.querySelector<HTMLSelectElement>(`#${prefix}-precision`)!;
+  const day = form.querySelector<HTMLInputElement>(`#${prefix}-day`)!;
+  const month = form.querySelector<HTMLInputElement>(`#${prefix}-month`)!;
+  const year = form.querySelector<HTMLInputElement>(`#${prefix}-year`)!;
+  const sync = (): void => {
+    const value = precision.value as Precision;
+    day.disabled = value !== "exacte";
+    day.required = value === "exacte";
+    month.disabled = value !== "exacte" && value !== "mois";
+    month.required = value === "exacte" || value === "mois";
+    year.disabled = value === "inconnue";
+    year.required = value !== "inconnue";
+  };
+  precision.addEventListener("change", sync);
+  sync();
+}
+
+function collectPartialDate(form: HTMLFormElement, prefix: string): PartialDateValues {
+  const precision = form.querySelector<HTMLSelectElement>(`#${prefix}-precision`)!.value as Precision;
+  const dayInput = form.querySelector<HTMLInputElement>(`#${prefix}-day`)!;
+  const monthInput = form.querySelector<HTMLInputElement>(`#${prefix}-month`)!;
+  const yearInput = form.querySelector<HTMLInputElement>(`#${prefix}-year`)!;
+  const jour = precision === "exacte" ? Number(dayInput.value) : null;
+  const mois = precision === "exacte" || precision === "mois" ? Number(monthInput.value) : null;
+  const annee = precision !== "inconnue" ? Number(yearInput.value) : null;
+  if (annee !== null && (!Number.isInteger(annee) || annee < 1800 || annee > 2200)) throw new Error("L'année doit être comprise entre 1800 et 2200.");
+  if (mois !== null && (!Number.isInteger(mois) || mois < 1 || mois > 12)) throw new Error("Le mois doit être compris entre 1 et 12.");
+  if (jour !== null) {
+    if (!Number.isInteger(jour) || jour < 1 || jour > 31 || mois === null || annee === null) throw new Error("La date exacte est incomplète.");
+    const check = new Date(annee, mois - 1, jour);
+    if (check.getFullYear() !== annee || check.getMonth() !== mois - 1 || check.getDate() !== jour) throw new Error("Cette date du calendrier n'existe pas.");
+  }
+  return { precision, jour, mois, annee };
+}
+
 export async function mountFaithfulProfile(
   container: HTMLElement,
   context: UserContext,
