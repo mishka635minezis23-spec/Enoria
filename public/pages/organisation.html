@@ -1,7 +1,9 @@
-<section class="space-y-6">
-  <div><p class="text-xs font-semibold uppercase tracking-[.16em] text-emerald-700">Territoire paroissial</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Organisation paroissiale</h1><p class="mt-1 text-sm text-slate-500">Gestion des quartiers et des communautés rattachées à chaque quartier.</p></div>
-  <div class="grid gap-4 lg:grid-cols-[1fr_18rem]">
-    <article class="page-card overflow-hidden"><div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-5"><div><h2 class="font-semibold text-slate-800">Quartiers et communautés</h2><p class="mt-1 text-xs text-slate-500">La structure territoriale de Notre Dame d'Afrique</p></div><button disabled class="cursor-not-allowed rounded-lg bg-slate-100 px-3 py-2 text-xs font-medium text-slate-400" title="Disponible après connexion sécurisée">Ajouter un quartier</button></div><div class="grid min-h-56 place-items-center p-8 text-center"><div><p class="text-sm font-medium text-slate-600">Aucun territoire chargé</p><p class="mt-1 text-xs text-slate-400">Les quartiers et communautés apparaîtront ici après connexion à la base.</p></div></div></article>
-    <aside class="page-card p-5"><h2 class="font-semibold text-slate-800">Règle de gestion</h2><p class="mt-2 text-sm leading-6 text-slate-600">L'appartenance paroissiale est déterminée par le périmètre de la paroisse. Les éléments territoriaux déjà utilisés dans l'historique ne seront pas supprimés brutalement : leur désactivation sera privilégiée.</p></aside>
-  </div>
+<section class="space-y-6" data-organisation>
+  <header class="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+    <div><p class="text-xs font-semibold uppercase tracking-widest text-emerald-700">Territoire paroissial</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Organisation paroissiale</h1><p class="mt-1 text-sm text-slate-500">Quartiers et communautés rattachées au territoire de la paroisse.</p></div>
+    <button type="button" disabled class="w-fit cursor-not-allowed rounded-lg bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-400" title="Les politiques RLS actuelles ne permettent pas encore l'écriture">＋ Ajouter un quartier</button>
+  </header>
+  <div id="organisation-feedback" class="hidden rounded-lg p-3 text-sm" role="status"></div>
+  <div id="organisation-list" class="space-y-4"><div class="page-card p-6 text-sm text-slate-500">Chargement des quartiers…</div></div>
+  <p class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-800">La structure territoriale est affichée en lecture seule. La base actuelle ne possède pas de politique d'écriture pour les quartiers et communautés. Les commandes de création, modification et désactivation resteront bloquées jusqu'à validation d'une évolution RLS.</p>
 </section>
