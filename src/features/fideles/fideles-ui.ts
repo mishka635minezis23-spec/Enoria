@@ -2,6 +2,7 @@ import type { Database, Tables } from "../../types/database.types";
 import type { ActivePastoralYear, UserContext } from "../../auth/auth-service";
 import { getSupabaseClient } from "../../lib/supabase";
 import { getAppConfig } from "../../config/app-config";
+import { mountLivret3D } from "../livret/livret-3d";
 import {
   getFaithfulInitialTab,
   getFaithfulListQuery,
@@ -323,8 +324,23 @@ export async function mountFaithfulProfile(
   context: UserContext,
   faithfulId: string,
   activeYear: ActivePastoralYear | null
-): Promise<void> {
+): Promise<() => void> {
   container.querySelector<HTMLButtonElement>("#faithful-back")?.addEventListener("click", navigateBackFromFaithful);
+  const livretModal = container.querySelector<HTMLElement>("#livret-modal");
+  const livretStage = container.querySelector<HTMLElement>("#livret-3d-container");
+  let livretCleanup: (() => void) | null = null;
+  let livretRequest = 0;
+  const closeLivret = (): void => {
+    livretRequest++;
+    livretCleanup?.();
+    livretCleanup = null;
+    livretModal?.classList.add("hidden");
+    if (livretStage) livretStage.innerHTML = "";
+  };
+  container.querySelector<HTMLButtonElement>("#close-livret-3d")?.addEventListener("click", closeLivret);
+  livretModal?.addEventListener("click", (event) => {
+    if (event.target === livretModal) closeLivret();
+  });
   const nameNode = container.querySelector<HTMLElement>("#profile-name");
   const subtitleNode = container.querySelector<HTMLElement>("#profile-subtitle");
   const contentNode = container.querySelector<HTMLElement>("#profile-content");
@@ -356,6 +372,54 @@ export async function mountFaithfulProfile(
 
     nameEl.textContent = `${faithfulRecord.prenom} ${faithfulRecord.nom}`;
     subtitleEl.textContent = `${faithfulRecord.sexe === "masculin" ? "Masculin" : faithfulRecord.sexe === "feminin" ? "Féminin" : "Sexe non précisé"} · ${faithfulRecord.statut === "decede" ? "Décédé" : "Vivant"}`;
+
+    container.querySelector<HTMLButtonElement>("#open-livret-3d")?.addEventListener("click", async (event) => {
+      const button = event.currentTarget as HTMLButtonElement;
+      if (!livretModal || !livretStage) return;
+      closeLivret();
+      const request = ++livretRequest;
+      livretModal.classList.remove("hidden");
+      livretStage.innerHTML = '<div class="rounded-lg bg-slate-50 p-8 text-center text-sm text-slate-500">Préparation du livret…</div>';
+      button.disabled = true;
+      try {
+        const [bookSacraments, bookMarriages] = await Promise.all([
+          supabase.from("sacrements").select("type,jour,mois,annee,precision,numero_acte,page_registre").eq("fidele_id",faithfulRecord.id),
+          supabase.from("evenements_matrimoniaux").select("type,jour,mois,annee,precision,conjoint_nom").eq("fidele_id",faithfulRecord.id)
+        ]);
+        if (bookSacraments.error) throw bookSacraments.error;
+        if (bookMarriages.error) throw bookMarriages.error;
+        if (request !== livretRequest || livretModal.classList.contains("hidden")) return;
+        const labels: Record<string,string> = { bapteme:"Baptême",eucharistie:"Eucharistie",confirmation:"Confirmation" };
+        const eventLabels: Record<string,string> = { ante_baptismum:"Mention avant baptême",post_baptismum:"Mention après baptême",obiit_conjux:"Décès du conjoint",novas_nuptias:"Nouvelles noces" };
+        const bookletData = {
+          faithfulName: `${faithfulRecord.prenom} ${faithfulRecord.nom}`,
+          birthText: formatPartialDate(faithfulRecord.naissance_jour,faithfulRecord.naissance_mois,faithfulRecord.naissance_annee,faithfulRecord.naissance_precision),
+          parentsText: [faithfulRecord.nom_pere,faithfulRecord.nom_mere].filter(Boolean).join(" / ") || "Non renseignés",
+          communityText: [quartierName,community?.nom??""].filter(Boolean).join(" · ") || "Non renseignée",
+          sacraments: (bookSacraments.data??[]).map((item)=>({
+            label:labels[item.type]??item.type,
+            date:formatPartialDate(item.jour,item.mois,item.annee,item.precision),
+            reference:`Acte ${item.numero_acte??"—"} · Page ${item.page_registre??"—"}`
+          })),
+          marriages: (bookMarriages.data??[]).map((item)=>({
+            label:eventLabels[item.type]??item.type,
+            date:formatPartialDate(item.jour,item.mois,item.annee,item.precision),
+            spouse:item.conjoint_nom??"Non renseigné"
+          }))
+        };
+        livretCleanup = await mountLivret3D(livretStage,bookletData);
+        if (request !== livretRequest || livretModal.classList.contains("hidden")) {
+          livretCleanup();
+          livretCleanup = null;
+        }
+      } catch (error) {
+        if (request === livretRequest) {
+          livretStage.innerHTML = `<p class="rounded-lg bg-rose-50 p-4 text-sm text-rose-700">${escapeHtml(error instanceof Error?error.message:"Impossible de préparer le livret.")}</p>`;
+        }
+      } finally {
+        button.disabled = false;
+      }
+    });
 
     const tabs = [...container.querySelectorAll<HTMLButtonElement>("[data-tab]")];
     let tabSequence = 0;
@@ -693,9 +757,11 @@ export async function mountFaithfulProfile(
 
     tabs.forEach((button) => button.addEventListener("click", () => void renderTab(button.dataset.tab ?? "general")));
     void renderTab(getFaithfulInitialTab());
+    return closeLivret;
   } catch (error) {
     nameEl.textContent = "Dossier indisponible";
     subtitleEl.textContent = "Les informations ne sont pas accessibles avec ce compte.";
     contentEl.innerHTML = `<section class="page-card p-5 text-sm text-rose-700">${escapeHtml(error instanceof Error ? error.message : "Impossible de charger le dossier.")}</section>`;
+    return closeLivret;
   }
 }
