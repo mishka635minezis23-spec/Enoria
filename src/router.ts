@@ -11,9 +11,46 @@ export const ROUTES = {
 
 export type RouteKey = keyof typeof ROUTES;
 
+function getHashPath(): string {
+  return window.location.hash.replace(/^#\/?/, "").split("?")[0];
+}
+
 export function getCurrentRoute(): RouteKey {
-  const key = window.location.hash.replace(/^#\/?/, "").split(/[?&]/)[0] as RouteKey;
+  const key = getHashPath().split("/")[0] as RouteKey;
   return key && key in ROUTES ? key : "dashboard";
+}
+
+export function getFaithfulIdFromRoute(): string | null {
+  const parts = getHashPath().split("/");
+  if (parts[0] !== "fideles" || !parts[1]) return null;
+  try { return decodeURIComponent(parts[1]); } catch { return null; }
+}
+
+export function getFaithfulReturnQuery(): string {
+  return new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("from") ?? "";
+}
+
+export function getFaithfulListQuery(): string {
+  if (getFaithfulIdFromRoute()) return getFaithfulReturnQuery();
+  return window.location.hash.split("?")[1] ?? "";
+}
+
+export function updateFaithfulListQuery(params: URLSearchParams): void {
+  const query = params.toString();
+  const hash = `#/fideles${query ? `?${query}` : ""}`;
+  window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
+}
+
+export function navigateToFaithful(id: string): void {
+  const currentQuery = getFaithfulListQuery();
+  const params = new URLSearchParams();
+  if (currentQuery) params.set("from", currentQuery);
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  window.location.hash = `#/fideles/${encodeURIComponent(id)}${suffix}`;
+}
+
+export function navigateToFaithfulList(query = ""): void {
+  window.location.hash = `#/fideles${query ? `?${query}` : ""}`;
 }
 
 export function navigateTo(route: RouteKey): void {
@@ -26,8 +63,9 @@ export function navigateTo(route: RouteKey): void {
   window.location.hash = nextHash;
 }
 
-export async function loadRouteContent(route: RouteKey): Promise<string> {
-  const response = await fetch(`/pages/${ROUTES[route].file}`, { cache: "no-cache" });
+export async function loadRouteContent(route: RouteKey, faithfulId: string | null = null): Promise<string> {
+  const file = route === "fideles" && faithfulId ? "fideles-profile.html" : ROUTES[route].file;
+  const response = await fetch(`/pages/${file}`, { cache: "no-cache" });
   if (!response.ok) throw new Error(`Impossible de charger la page (${response.status}).`);
   return response.text();
 }
