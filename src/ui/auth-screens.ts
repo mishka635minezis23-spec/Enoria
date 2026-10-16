@@ -10,7 +10,7 @@ export function renderSetupScreen(
     <main class="grid min-h-screen place-items-center bg-slate-50 px-4 py-10">
       <section class="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div class="flex items-center gap-3">
-          <div class="grid h-12 w-12 place-items-center rounded-xl bg-[#123b32] text-xl font-bold text-white">E</div>
+          <div class="grid h-12 w-12 place-items-center rounded-xl bg-[var(--enoria-deep)] text-xl font-bold text-white">E</div>
           <div><p class="text-xl font-semibold text-slate-900">Enoria</p><p class="text-xs text-slate-500">Installation paroissiale</p></div>
         </div>
         <p class="mt-7 text-xs font-semibold uppercase tracking-widest text-emerald-700">Première configuration</p>
@@ -48,7 +48,7 @@ export function renderSetupScreen(
             </div>
           </div>
           <p id="setup-error" class="hidden rounded-lg bg-rose-50 p-3 text-sm text-rose-700" role="alert"></p>
-          <button id="setup-submit" type="submit" class="w-full rounded-lg bg-[#176653] px-4 py-3 text-sm font-semibold text-white hover:bg-[#125443]">Enregistrer la configuration</button>
+          <button id="setup-submit" type="submit" class="w-full rounded-lg bg-[var(--enoria-green)] px-4 py-3 text-sm font-semibold text-white hover:bg-[#125443]">Enregistrer la configuration</button>
         </form>
         <p class="mt-5 text-[11px] leading-5 text-slate-400">Les paramètres publics sont conservés dans le stockage local de ce navigateur. Les données des fidèles ne seront jamais stockées dans ce stockage local.</p>
       </section>
@@ -74,6 +74,9 @@ export function renderSetupScreen(
     button.disabled = true;
     button.textContent = "Enregistrement…";
     try {
+      if (url.value.trim() !== current.supabase.url && !key.value.trim()) {
+        throw new Error("Si tu changes de projet Supabase, saisis aussi la nouvelle clé publique.");
+      }
       const next: Partial<AppConfig> = {
         parishName: parish.value,
         dioceseName: diocese.value,
@@ -104,7 +107,7 @@ export function renderLoginScreen(
     <main class="grid min-h-screen place-items-center bg-slate-50 px-4 py-10">
       <section class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div class="flex items-center gap-3">
-          <div class="grid h-12 w-12 place-items-center rounded-xl bg-[#123b32] text-xl font-bold text-white">E</div>
+          <div class="grid h-12 w-12 place-items-center rounded-xl bg-[var(--enoria-deep)] text-xl font-bold text-white">E</div>
           <div><p class="text-xl font-semibold text-slate-900">Enoria</p><p class="max-w-[16rem] truncate text-xs text-slate-500" id="login-parish"></p></div>
         </div>
         <p class="mt-8 text-xs font-semibold uppercase tracking-widest text-emerald-700">Espace sécurisé</p>
@@ -118,7 +121,7 @@ export function renderLoginScreen(
             <input name="password" type="password" required autocomplete="current-password" class="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100" />
           </label>
           <p id="login-error" class="hidden rounded-lg bg-rose-50 p-3 text-sm text-rose-700" role="alert"></p>
-          <button id="login-submit" type="submit" class="w-full rounded-lg bg-[#176653] px-4 py-3 text-sm font-semibold text-white hover:bg-[#125443]">Se connecter</button>
+          <button id="login-submit" type="submit" class="w-full rounded-lg bg-[var(--enoria-green)] px-4 py-3 text-sm font-semibold text-white hover:bg-[#125443]">Se connecter</button>
         </form>
         <p class="mt-5 text-center text-xs leading-5 text-slate-400">Les comptes sont créés par l'administrateur. L'inscription publique est désactivée.</p>
         <button id="edit-config" type="button" class="mt-4 w-full text-xs font-medium text-slate-500 underline underline-offset-4">Modifier la configuration de cette installation</button>
