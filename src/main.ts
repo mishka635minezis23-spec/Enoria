@@ -42,7 +42,7 @@ app.innerHTML = `
         </div>
         <div class="flex items-center gap-3">
           <span class="hidden text-xs text-slate-500 sm:inline" id="today"></span>
-          <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-medium text-amber-800">Mode préparation</span>
+          <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-medium text-amber-800">Année pastorale à configurer</span>
           <div class="grid h-9 w-9 place-items-center rounded-full bg-emerald-50 text-sm font-semibold text-emerald-800" aria-label="Compte utilisateur">U</div>
         </div>
       </header>
@@ -72,15 +72,20 @@ function updateActiveLink(route: RouteKey): void {
     else link.removeAttribute("aria-current");
   });
 }
+let renderSequence = 0;
 async function renderRoute(): Promise<void> {
+  const sequence = ++renderSequence;
   const route = getCurrentRoute();
   updateActiveLink(route);
   closeMenu();
   try {
-    await loadRouteContent(route, content);
+    const markup = await loadRouteContent(route);
+    if (sequence !== renderSequence) return;
+    content.innerHTML = markup;
     document.title = `${ROUTES[route].label} — Enoria`;
     window.scrollTo({ top: 0, behavior: "instant" });
   } catch {
+    if (sequence !== renderSequence) return;
     content.innerHTML = `
       <section class="page-card p-6 md:p-8">
         <p class="text-sm font-semibold text-rose-700">Page indisponible</p>
