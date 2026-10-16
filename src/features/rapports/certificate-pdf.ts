@@ -88,7 +88,9 @@ export async function createCertificatePdf(data:CertificatePdfData):Promise<Uint
 }
 
 export function downloadCertificatePdf(bytes:Uint8Array,fileName:string):void{
-  const blob=new Blob([bytes],{type:"application/pdf"});
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  const blob=new Blob([buffer],{type:"application/pdf"});
   const url=URL.createObjectURL(blob);
   const link=document.createElement("a");
   link.href=url;
