@@ -639,10 +639,10 @@ export async function mountFaithfulProfile(
           const isPriest = context.roles.includes("cure");
           const statusLabels: Record<string, string> = { attente: "En attente", valide: "Validé par le curé", refuse: "Refusé", emis: "Duplicata émis" };
           const requestHtml = sacramentRecords.map((record) => {
-            const pending = certificates.some((item) => item.sacrement_id === record.id && item.statut === "attente");
+            const pending = certificates.some((item) => item.sacrement_id === record.id && (item.statut === "attente" || item.statut === "valide"));
             const label = record.type === "bapteme" ? "Baptême" : record.type === "eucharistie" ? "Eucharistie" : "Confirmation";
             const action = pending
-              ? '<span class="text-xs text-amber-700">Demande en attente</span>'
+              ? '<span class="text-xs text-amber-700">Demande en cours de traitement</span>'
               : activeYear
                 ? `<button type="button" data-request-duplicata="${escapeHtml(record.id)}" class="rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-800">Demander un duplicata</button>`
                 : '<span class="text-xs text-slate-500">Aucune année active : demande bloquée</span>';
