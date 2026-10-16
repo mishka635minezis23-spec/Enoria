@@ -72,7 +72,7 @@ Seule l'URL et une clé publique sont utilisées dans le navigateur. **La clé s
 
 Les écritures déjà activées sont limitées aux voies autorisées par le schéma : dîmes via upsert protégé par RLS, Eucharistie/Confirmation via contraintes de registre, et duplicatas via RPC sécurisées. Les écritures non couvertes par des contraintes ou fonctions transactionnelles restent désactivées. Voir [docs/database-compatibility.md](docs/database-compatibility.md).
 
-Le type `Database` dans `src/types/database.types.ts` a été généré depuis le schéma existant. Il doit être régénéré après toute évolution validée de la base.
+Le type `Database` dans `src/types/database.types.ts` a été généré depuis le schéma existant. Il doit être régénéré après toute évolution validée de la base. Le [plan de recette](docs/test-plan.md) décrit les vérifications manuelles à effectuer par rôle et par module.
 
 ## Politique hors ligne
 
