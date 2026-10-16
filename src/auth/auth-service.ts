@@ -76,13 +76,20 @@ export async function loadUserContext(): Promise<UserContext | null> {
   };
 }
 
-export async function loadActivePastoralYear(parishId: string): Promise<string | null> {
+export interface ActivePastoralYear {
+  id: string;
+  libelle: string;
+  date_debut: string;
+  date_fin: string;
+}
+
+export async function loadActivePastoralYear(parishId: string): Promise<ActivePastoralYear | null> {
   const { data, error } = await getSupabaseClient()
     .from("annees_pastorales")
-    .select("id,libelle")
+    .select("id,libelle,date_debut,date_fin")
     .eq("paroisse_id", parishId)
     .eq("active", true)
     .maybeSingle();
   if (error) throw error;
-  return data?.libelle ?? null;
+  return data;
 }
