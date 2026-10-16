@@ -2,30 +2,31 @@
 
 Registre numérique des sacrements de la paroisse **Notre Dame d'Afrique**. Enoria complète les registres papier, qui restent la référence officielle.
 
-## Phase actuelle
+## État du projet
 
-Socle technique et navigation uniquement. La connexion Supabase, les formulaires métier, les PDF et le livret 3D seront développés dans des phases ultérieures. Aucune donnée paroissiale réelle ou simulée n'est incluse.
+Le socle PWA, l'authentification, la navigation, les principales lectures métier et plusieurs écritures sécurisées sont en place. Les fonctionnalités sont développées progressivement à partir du schéma Supabase existant ; aucune migration ni modification de base n'a été exécutée pendant cette phase.
 
 ## Stack
 
-- HTML pour la coque et les vues de chaque module
-- TypeScript pour la navigation et la logique
-- Tailwind CSS 4 pour le style
-- Vite pour le développement et la compilation
-- vite-plugin-pwa pour l'installation PWA et le cache des ressources statiques
+- HTML : coque persistante et une vue distincte par module
+- TypeScript : navigation, validations et logique métier
+- Tailwind CSS 4 : styles compilés
+- Vite : développement et compilation
+- Supabase Auth + Postgres/RLS : authentification et données
+- vite-plugin-pwa : installation PWA et cache des seuls assets statiques
+- pdf-lib : génération locale des duplicatas PDF après validation
+- Three.js : livret 3D généré à partir des données, avec vue 2D de secours
 
-## Prérequis
+## Prérequis et démarrage
 
 Node.js 20.19+ ou 22.12+, puis npm.
-
-## Démarrer
 
 ```bash
 npm install
 npm run dev
 ```
 
-Pour vérifier le projet :
+Vérification et compilation :
 
 ```bash
 npm run typecheck
@@ -33,47 +34,50 @@ npm run build
 npm run preview
 ```
 
-## Organisation
+Les scripts `predev` et `prebuild` génèrent automatiquement les icônes PNG PWA à partir des couleurs de l'application. Les icônes générées ne contiennent aucune donnée personnelle.
+
+## Organisation du code
 
 - `src/config/app-config.ts` : source centrale de configuration et stockage local des paramètres publics
 - `src/lib/supabase.ts` : client Supabase typé, sans clé secrète
-- `src/auth/` : authentification et permissions par rôle
-- `src/ui/` : écrans de première configuration, connexion et paramètres
+- `src/auth/` : authentification, chargement des affectations et permissions par rôle
+- `src/features/` : logique des modules (fidèles, sacrements, dîmes, statistiques, rapports, livret)
+- `src/ui/` : première configuration, connexion et paramètres
 - `src/main.ts` : coque persistante, navigation et démarrage PWA
 - `src/router.ts` : routes et chargement des vues
 - `src/types/database.types.ts` : types générés depuis le schéma Supabase
-- `src/styles.css` : styles Tailwind et règles de présentation
 - `public/pages/*.html` : une vue HTML par module fonctionnel
+- `scripts/generate-icons.mjs` : génération des icônes d'installation
 
-Les routes utilisent des fragments (`#/dashboard`, `#/fideles`, etc.). Le menu reste monté pendant le changement de vue et le navigateur peut revenir en arrière ou avancer.
+Les routes utilisent des fragments (`#/dashboard`, `#/fideles`, etc.). Le menu reste monté pendant le changement de vue. Les filtres de la liste des fidèles sont conservés lorsqu'on ouvre une fiche puis qu'on revient à la liste.
 
-## Modules présents
+## Les huit modules
 
-1. Tableau de bord
-2. Organisation paroissiale
-3. Gestion des fidèles
-4. Gestion des sacrements
-5. Gestion des dîmes
-6. Rapports
-7. Statistiques par année pastorale
-8. Paramètres
+1. **Tableau de bord** : indicateurs calculés depuis les vues statistiques sécurisées.
+2. **Organisation paroissiale** : quartiers et communautés en lecture seule tant que les politiques RLS d'écriture ne sont pas définies.
+3. **Gestion des fidèles** : recherche, filtres, liste et fiche individuelle en cinq onglets. L'inscription d'un nouveau fidèle reste bloquée jusqu'à la fonction transactionnelle fidèle + baptême.
+4. **Gestion des sacrements** : recherche, consultation du dossier, ajout d'Eucharistie et de Confirmation. Le livret 3D est généré à partir des données structurées ; une vue 2D est disponible si WebGL ne fonctionne pas.
+5. **Gestion des dîmes** : saisie et mise à jour d'une contribution par fidèle et par année pastorale.
+6. **Rapports** : exports CSV des fidèles, sacrements, événements matrimoniaux et dîmes. Les duplicatas PDF passent par les fonctions RPC de demande, validation du curé et émission.
+7. **Statistiques pastorales** : filtres par année, quartier et communauté, tranches d'âge estimées à partir des années de naissance connues, export de synthèse CSV.
+8. **Paramètres** : configuration de l'installation et identité paroissiale ; accessible au curé.
 
 ## Configuration et sécurité
 
-Au premier lancement, un écran de configuration demande le nom de la paroisse, l'URL Supabase et la clé publique publishable (ou anon historique). Ces valeurs sont conservées localement sur le PC, dans une seule source de configuration : `src/config/app-config.ts`. Le curé peut ensuite modifier la configuration depuis Paramètres ; changer de projet Supabase ferme la session et redémarre l'application.
+Au premier lancement, l'écran de configuration demande le nom de la paroisse, l'URL Supabase et la clé publique publishable (ou anon historique). Ces valeurs publiques sont conservées localement sur le PC, dans une seule source de configuration : `src/config/app-config.ts`. Les paramètres ne sont pas partagés entre installations. Seul le curé peut modifier la configuration depuis Paramètres ; changer de projet Supabase ferme la session et redémarre l'application.
 
 Les comptes ne peuvent pas s'inscrire depuis l'application. Ils doivent être créés par l'administrateur dans Supabase Auth, puis recevoir une affectation dans `affectations_utilisateurs`. Le profil associé est créé par le trigger existant.
 
 Seule l'URL et une clé publique sont utilisées dans le navigateur. **La clé service_role ou une clé sb_secret ne doit jamais être exposée côté client ni commitée dans ce dépôt.** Le menu est filtré par rôle, mais la sécurité réelle reste assurée par les politiques RLS de la base.
 
-Le type `Database` dans `src/types/database.types.ts` a été généré depuis le schéma existant. Il faut le régénérer après toute évolution validée de la base.
+Les écritures déjà activées sont limitées aux voies autorisées par le schéma : dîmes via upsert protégé par RLS, Eucharistie/Confirmation via contraintes de registre, et duplicatas via RPC sécurisées. Les écritures non couvertes par des contraintes ou fonctions transactionnelles restent désactivées. Voir [docs/database-compatibility.md](docs/database-compatibility.md).
 
-Avant d'activer les écritures métier, les points bloquants décrits dans `docs/database-compatibility.md` doivent être traités et validés côté base.
+Le type `Database` dans `src/types/database.types.ts` a été généré depuis le schéma existant. Il doit être régénéré après toute évolution validée de la base.
 
 ## Politique hors ligne
 
-La PWA met en cache les ressources de l'application et les vues HTML statiques. Aucune route API, réponse Supabase ou donnée personnelle n'est ajoutée à un cache runtime. Les opérations métier seront bloquées sans connexion dans la version prévue ; aucune file de synchronisation hors ligne n'est prévue.
+La PWA met en cache les ressources de l'application et les vues HTML statiques. Aucune route API, réponse Supabase ou donnée personnelle n'est ajoutée à un cache runtime. Les opérations métier sont suspendues sans connexion ; aucune file de synchronisation hors ligne n'est prévue.
 
-## Déploiement
+## Installation et déploiement
 
-Le serveur d'hébergement doit servir `index.html` à la racine. Les routes applicatives sont des fragments URL et ne nécessitent pas de règles de réécriture supplémentaires. Servir le site en HTTPS pour activer l'installation PWA.
+L'application est prévue pour être installée sur le PC Windows de la paroisse via Chrome ou Edge. L'hébergement doit servir le site en HTTPS et exposer `index.html` à la racine. Les routes applicatives sont des fragments URL et ne nécessitent pas de règles de réécriture supplémentaires.
