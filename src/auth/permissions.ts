@@ -24,10 +24,8 @@ export function canWriteSacraments(roles: EnoriaRole[]): boolean {
   return roles.some((role) => role === "secretaire" || role === "cure");
 }
 
-export function canManageOrganization(_roles: EnoriaRole[]): boolean {
-  // Les politiques RLS actuelles n'autorisent aucune écriture sur quartiers/communautes.
-  // Garder les commandes désactivées jusqu'à validation d'une voie d'écriture côté base.
-  return false;
+export function canManageOrganization(roles: EnoriaRole[]): boolean {
+  return roles.some((role) => role === "secretaire" || role === "cure");
 }
 
 export function canManageDimes(roles: EnoriaRole[]): boolean {

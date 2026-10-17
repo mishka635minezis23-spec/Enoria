@@ -1,9 +1,9 @@
 <section class="space-y-6" data-organisation>
   <header class="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
     <div><p class="text-xs font-semibold uppercase tracking-widest text-emerald-700">Territoire paroissial</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Organisation paroissiale</h1><p class="mt-1 text-sm text-slate-500">Quartiers et communautés rattachées au territoire de la paroisse.</p></div>
-    <button type="button" disabled class="w-fit cursor-not-allowed rounded-lg bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-400" title="Les politiques RLS actuelles ne permettent pas encore l'écriture">＋ Ajouter un quartier</button>
+    <button id="organisation-add-quartier" type="button" class="w-fit rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-800">＋ Ajouter un quartier</button>
   </header>
   <div id="organisation-feedback" class="hidden rounded-lg p-3 text-sm" role="status"></div>
   <div id="organisation-list" class="space-y-4"><div class="page-card p-6 text-sm text-slate-500">Chargement des quartiers…</div></div>
-  <p class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-800">La structure territoriale est affichée en lecture seule. La base actuelle ne possède pas de politique d'écriture pour les quartiers et communautés. Les commandes de création, modification et désactivation resteront bloquées jusqu'à validation d'une évolution RLS.</p>
+  <p class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600">La gestion des quartiers et des communautés est réservée aux comptes ayant une affectation active de curé ou de secrétaire dans la paroisse concernée. Les permissions de base de données restent appliquées à chaque opération.</p>
 </section>
