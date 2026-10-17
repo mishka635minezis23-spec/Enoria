@@ -253,10 +253,6 @@ const CARD_COLORS: { key: CardColorKey; label: string; gradient: string; swatch:
   { key: "or", label: "Or doux", gradient: "linear-gradient(135deg,#fffbeb 0%,#fde68a 52%,#fffdf4 100%)", swatch: "linear-gradient(135deg,#fffbeb,#fcd34d)" }
 ];
 
-function cardGradient(value: string | null | undefined): string {
-  return CARD_COLORS.find((item) => item.key === value)?.gradient ?? CARD_COLORS[0].gradient;
-}
-
 function renderCardColorChoices(selected: string, inputName: string): string {
   return CARD_COLORS.map((item) => {
     const active = item.key === selected;
@@ -268,12 +264,6 @@ function renderCardColorChoices(selected: string, inputName: string): string {
       item.swatch + '"></span><span class="text-[10px] font-medium leading-tight text-slate-600">' +
       escapeHtml(item.label) + '</span></label>';
   }).join("");
-}
-
-function bookletLine(label: string, value: unknown): string {
-  return '<div class="my-1 flex min-w-0 items-baseline gap-1.5 text-[11px] leading-tight text-slate-800"><span class="shrink-0">' +
-    escapeHtml(label) + '</span><span class="min-h-5 min-w-0 flex-1 border-b border-dotted border-slate-500 px-1 font-serif italic text-indigo-800 [overflow-wrap:anywhere]">' +
-    escapeHtml(value || "") + '</span></div>';
 }
 
 function mountFaithfulCreateWizard(
@@ -811,8 +801,6 @@ export async function mountFaithfulProfile(
       const baptism = sacramentByType.get("bapteme");
       const eucharist = sacramentByType.get("eucharistie");
       const confirmation = sacramentByType.get("confirmation");
-      const dateFor = (item: {jour:number|null;mois:number|null;annee:number|null;precision:Precision}|undefined): string =>
-        !item || item.precision === "inconnue" ? "" : formatPartialDate(item.jour,item.mois,item.annee,item.precision);
       const birth = faithfulRecord.naissance_precision === "inconnue" ? "" : formatPartialDate(faithfulRecord.naissance_jour,faithfulRecord.naissance_mois,faithfulRecord.naissance_annee,faithfulRecord.naissance_precision);
       const death = faithfulRecord.deces_precision === "inconnue" ? "" : formatPartialDate(faithfulRecord.deces_jour,faithfulRecord.deces_mois,faithfulRecord.deces_annee,faithfulRecord.deces_precision);
       const paletteHtml = canManageFaithful ? '<button type="button" id="faithful-meta-toggle" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Modifier statut / couleur</button>' : '';
