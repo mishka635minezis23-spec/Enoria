@@ -802,7 +802,6 @@ export async function mountFaithfulProfile(
       const eucharist = sacramentByType.get("eucharistie");
       const confirmation = sacramentByType.get("confirmation");
       const birth = faithfulRecord.naissance_precision === "inconnue" ? "" : formatPartialDate(faithfulRecord.naissance_jour,faithfulRecord.naissance_mois,faithfulRecord.naissance_annee,faithfulRecord.naissance_precision);
-      const death = faithfulRecord.deces_precision === "inconnue" ? "" : formatPartialDate(faithfulRecord.deces_jour,faithfulRecord.deces_mois,faithfulRecord.deces_annee,faithfulRecord.deces_precision);
       const paletteHtml = canManageFaithful ? '<button type="button" id="faithful-meta-toggle" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Modifier statut / couleur</button>' : '';
       const relatedIds = [...new Set(marriages.flatMap((item) => [
         item.fidele_id !== faithfulRecord.id ? item.fidele_id : null,
