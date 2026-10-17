@@ -814,14 +814,14 @@ export async function mountFaithfulProfile(
           bookletLine("Matrina",item?.marraine) + bookletLine("Ministre",item?.ministre) + bookletLine("Visa",item?.visa);
       };
       const bookletCardHtml = `
-        <section class="livret-card-sheet mx-auto flex h-full w-full max-w-[1123px] flex-col overflow-hidden border-2 border-black bg-white shadow-2xl" style="aspect-ratio:297/210;background:${cardGradient(faithfulRecord.carte_couleur)}">
+        <section class="livret-card-sheet mx-auto flex w-full max-w-[1123px] flex-col overflow-hidden border-2 border-black bg-white shadow-2xl" style="width:min(100%,1123px,calc((100dvh - 64px)*297/210));aspect-ratio:297/210;background:${cardGradient(faithfulRecord.carte_couleur)}">
           <header class="shrink-0 border-b-2 border-black px-4 py-2 text-center sm:px-6">
             <p class="text-[9px] font-bold uppercase tracking-[0.22em] text-slate-700">Paroisse · ${escapeHtml(getAppConfig().parishName)}</p>
             <h2 class="mt-0.5 font-serif text-lg font-bold uppercase tracking-[0.18em] text-slate-950 sm:text-xl">Liber memorialis</h2>
             <p class="mt-0.5 text-[9px] text-slate-700">Registre personnel · ${escapeHtml(faithfulRecord.prenom)} ${escapeHtml(faithfulRecord.nom)}</p>
           </header>
           <div class="grid min-h-0 flex-1 grid-cols-3 divide-x-2 divide-black overflow-hidden">
-            <section class="min-w-0 overflow-hidden px-2 py-2 sm:px-4">
+            <section class="min-w-0 overflow-y-auto px-2 py-2 sm:px-4">
               <h3 class="mb-1 text-center text-[11px] font-bold tracking-[0.18em]">IDENTITAS</h3>
               ${bookletLine("Nomen",faithfulRecord.prenom)}${bookletLine("Familia",faithfulRecord.nom)}${bookletLine("Sexus",faithfulRecord.sexe === "masculin" ? "Masculin" : "Féminin")}${bookletLine("Pater",faithfulRecord.nom_pere)}${bookletLine("Mater",faithfulRecord.nom_mere)}${bookletLine("Nat. in",faithfulRecord.lieu_naissance)}${bookletLine("die",birth)}
               <hr class="my-1 border-0 border-t-2 border-black/80" />
@@ -830,14 +830,14 @@ export async function mountFaithfulProfile(
               ${bookletSacramentBlock("EUCHARISTIA",eucharist)}
               ${bookletSacramentBlock("CONFIRMATIO",confirmation)}
             </section>
-            <section class="min-w-0 overflow-hidden px-2 py-2 sm:px-4">
+            <section class="min-w-0 overflow-y-auto px-2 py-2 sm:px-4">
               <h3 class="mb-1 text-center text-[11px] font-bold tracking-[0.18em]">MATRIMONIUM</h3>
               ${marriageHtml}
               <div class="mt-2 border-t-2 border-black pt-1">
                 ${bookletLine("Communitas",community?.nom)}${bookletLine("Quartier",quartierName)}${bookletLine("Depuis",faithfulRecord.communaute_depuis)}${bookletLine("Statut",faithfulRecord.statut === "decede" ? "Décédé" : "Vivant")}${faithfulRecord.statut === "decede" ? bookletLine("Décès",death) : ""}
               </div>
             </section>
-            <section class="min-w-0 overflow-hidden px-2 py-2 sm:px-4">
+            <section class="min-w-0 overflow-y-auto px-2 py-2 sm:px-4">
               <h3 class="mb-1 text-center text-[12px] font-bold tracking-[0.18em]">LIBERI</h3>
               ${childrenHtml}
               ${children.length > 5 ? '<p class="mt-1 border-t border-black/60 pt-1 text-[9px] italic text-slate-600">' + children.length + ' enfants inscrits · suite conservée</p>' : ""}
@@ -1055,7 +1055,6 @@ export async function mountFaithfulProfile(
           const sacramentCards = sacramentRecords.map((item) => {
             const id = item.id;
             const label = sacramentLabels[item.type] ?? item.type;
-            const prefix = "sacdate-" + id.replace(/[^a-zA-Z0-9]/g,"");
             return '<article class="rounded-xl border border-slate-200 bg-white p-4">' +
               '<div class="flex flex-wrap items-start justify-between gap-3"><div><h3 class="font-semibold text-slate-900">' + escapeHtml(label) + '</h3>' +
               '<p class="mt-1 text-xs text-slate-500">' + escapeHtml(formatPartialDate(item.jour,item.mois,item.annee,item.precision)) + ' · Acte ' + escapeHtml(item.numero_acte ?? "—") + ' · Page ' + escapeHtml(item.page_registre ?? "—") + '</p>' +
