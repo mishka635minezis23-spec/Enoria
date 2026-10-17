@@ -311,7 +311,8 @@ function mountFaithfulCreateWizard(
       '<label class="' + labelClass + '">N° d’acte<input name="' + prefix + '-acte" maxlength="80" required class="' + inputClass + '" /></label>' +
       '<label class="' + labelClass + '">Page du registre<input name="' + prefix + '-page" maxlength="80" required class="' + inputClass + '" /></label>' +
       '<label class="' + labelClass + '">Parrain<input name="' + prefix + '-parrain" maxlength="160" class="' + inputClass + '" /></label>' +
-      '<label class="' + labelClass + '">Marraine<input name="' + prefix + '-marraine" maxlength="160" class="' + inputClass + '" /></label></div></fieldset>';
+      '<label class="' + labelClass + '">Marraine<input name="' + prefix + '-marraine" maxlength="160" class="' + inputClass + '" /></label>' +
+      '<label class="' + labelClass + '">Visa / observation<input name="' + prefix + '-visa" maxlength="160" class="' + inputClass + '" /></label></div></fieldset>';
   };
 
   const childCard = (index: number): string => {
@@ -489,7 +490,8 @@ function mountFaithfulCreateWizard(
             page_registre: String(values.get("new-bapteme-page") ?? "").trim(),
             ministre: String(values.get("new-bapteme-ministre") ?? "").trim(),
             parrain: String(values.get("new-bapteme-parrain") ?? "").trim(),
-            marraine: String(values.get("new-bapteme-marraine") ?? "").trim()
+            marraine: String(values.get("new-bapteme-marraine") ?? "").trim(),
+            visa: String(values.get("new-bapteme-visa") ?? "").trim()
           };
           const sacrements: Json[] = [];
           for (const prefix of ["new-eucharistie","new-confirmation"]) {
@@ -505,7 +507,8 @@ function mountFaithfulCreateWizard(
               page_registre: String(values.get(prefix + "-page") ?? "").trim(),
               ministre: String(values.get(prefix + "-ministre") ?? "").trim(),
               parrain: String(values.get(prefix + "-parrain") ?? "").trim(),
-              marraine: String(values.get(prefix + "-marraine") ?? "").trim()
+              marraine: String(values.get(prefix + "-marraine") ?? "").trim(),
+              visa: String(values.get(prefix + "-visa") ?? "").trim()
             });
           }
           const children: Json[] = [];
@@ -854,7 +857,7 @@ export async function mountFaithfulProfile(
             <div class="border-b-2 border-black/80 px-4 py-3 text-center"><p class="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-700">Paroisse · ${escapeHtml(getAppConfig().parishName)}</p><h2 class="mt-1 font-serif text-lg font-bold uppercase tracking-widest text-slate-900">Liber memorialis</h2><p class="mt-1 text-[10px] text-slate-600">Fiche personnelle du fidèle</p></div>
             <div class="grid grid-cols-1 lg:grid-cols-3">
               <section class="min-w-0 p-4 sm:p-5"><h3 class="mb-2 text-center text-sm font-bold tracking-widest">IDENTITAS</h3>
-                ${bookletLine("Nomen",faithfulRecord.prenom)}${bookletLine("Nomen",faithfulRecord.nom)}${bookletLine("Pater",faithfulRecord.nom_pere)}${bookletLine("Mater",faithfulRecord.nom_mere)}${bookletLine("Nat. in",faithfulRecord.lieu_naissance)}${bookletLine("die",birth)}
+                ${bookletLine("Nomen",faithfulRecord.prenom)}${bookletLine("Nomen",faithfulRecord.nom)}${bookletLine("Sexus",faithfulRecord.sexe === "masculin" ? "Masculin" : "Féminin")}${bookletLine("Pater",faithfulRecord.nom_pere)}${bookletLine("Mater",faithfulRecord.nom_mere)}${bookletLine("Nat. in",faithfulRecord.lieu_naissance)}${bookletLine("die",birth)}
                 <hr class="my-3 border-0 border-t-2 border-black/80" /><h3 class="text-[13px] font-bold tracking-wide">BAPTISMUM</h3>
                 ${bookletLine("in",baptism?.lieu)}${bookletLine("die",dateFor(baptism))}${bookletLine("n°",baptism?.numero_acte)}${bookletLine("Suscepit",baptism?.parrain)}${bookletLine("Matrina",baptism?.marraine)}${bookletLine("Quod testor ego",baptism?.ministre)}
                 ${sacramentBlock("EUCHARISTIA",eucharist)}${sacramentBlock("CONFIRMATIO",confirmation)}
