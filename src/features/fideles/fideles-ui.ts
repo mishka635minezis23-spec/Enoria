@@ -826,6 +826,8 @@ export async function mountFaithfulProfile(
         if (value.precision === "mois") return value.annee && value.mois ? pad(value.mois) + "/" + value.annee : value.annee ? String(value.annee) : "";
         return value.jour && value.mois && value.annee ? pad(value.jour) + "/" + pad(value.mois) + "/" + value.annee : value.annee ? String(value.annee) : "";
       };
+      const birthLivret = livretDate({jour:faithfulRecord.naissance_jour,mois:faithfulRecord.naissance_mois,annee:faithfulRecord.naissance_annee,precision:faithfulRecord.naissance_precision});
+      const deathLivret = livretDate({jour:faithfulRecord.deces_jour,mois:faithfulRecord.deces_mois,annee:faithfulRecord.deces_annee,precision:faithfulRecord.deces_precision});
       const L = (label: string, value: unknown): string =>
         '<div class="l"><span class="k">' + escapeHtml(label) + '</span><span class="v">' + escapeHtml(value ?? "") + '</span></div>';
       const R = (first: string, second: string): string => '<div class="row2">' + first + second + '</div>';
@@ -864,9 +866,9 @@ export async function mountFaithfulProfile(
           L("Nomen",faithfulRecord.prenom) + L("Familia",faithfulRecord.nom) +
           L("Pater",faithfulRecord.nom_pere) + L("Mater",faithfulRecord.nom_mere) +
           L("Quartier",quartierName) +
-          R(L("Nat. in",faithfulRecord.lieu_naissance),L("die",birth)) +
+          R(L("Nat. in",faithfulRecord.lieu_naissance),L("die",birthLivret)) +
           R(L("Sexus",faithfulRecord.sexe === "masculin" ? "Masculin" : "Féminin"),L("Statut",faithfulRecord.statut === "decede" ? "Décédé" : "Vivant")) +
-          (faithfulRecord.statut === "decede" ? L("Obiit die",death) : "") +
+          (faithfulRecord.statut === "decede" ? L("Obiit die",deathLivret) : "") +
           '<hr><h3>BAPTISMUM</h3>' +
           L("in",baptism?.lieu) +
           R(L("die",livretDate(baptism ? {jour:baptism.jour,mois:baptism.mois,annee:baptism.annee,precision:baptism.precision} : null)),L("n°",baptism?.numero_acte)) +
@@ -924,9 +926,9 @@ export async function mountFaithfulProfile(
       const childSlots = Math.max(5,children.length);
       const childItems = Array.from({length:childSlots},(_,index) => {
         const child = children[index];
-        const childBirth = child && child.naissance_precision !== "inconnue"
+        const childBirth = child
           ? livretDate({jour:child.naissance_jour,mois:child.naissance_mois,annee:child.naissance_annee,precision:child.naissance_precision}) : "";
-        const childBaptism = child && child.bapteme_precision !== "inconnue"
+        const childBaptism = child
           ? livretDate({jour:child.bapteme_jour,mois:child.bapteme_mois,annee:child.bapteme_annee,precision:child.bapteme_precision}) : "";
         return '<div class="child-item">' +
           L(String(index+1) + ")",child ? child.prenom + " " + child.nom : "") +
