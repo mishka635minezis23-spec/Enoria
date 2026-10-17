@@ -779,22 +779,130 @@ export async function mountFaithfulProfile(
     const tabs = [...container.querySelectorAll<HTMLButtonElement>("[data-tab]")];
     let tabSequence = 0;
 
-    const renderGeneral = (): void => {
-      const birth = formatPartialDate(faithfulRecord.naissance_jour, faithfulRecord.naissance_mois, faithfulRecord.naissance_annee, faithfulRecord.naissance_precision);
-      const death = formatPartialDate(faithfulRecord.deces_jour, faithfulRecord.deces_mois, faithfulRecord.deces_annee, faithfulRecord.deces_precision);
+    const canManageFaithful = context.roles.some((role) => role === "secretaire" || role === "cure");
+    const renderGeneral = async (sequence: number): Promise<void> => {
+      const [sacramentResult, marriageResult, childrenResult] = await Promise.all([
+        supabase.from("sacrements").select("*").eq("fidele_id", faithfulRecord.id).order("annee", { ascending: true }),
+        supabase.from("evenements_matrimoniaux").select("*").eq("fidele_id", faithfulRecord.id).order("annee", { ascending: true }),
+        supabase.from("enfants").select("*").eq("fidele_parent_id", faithfulRecord.id).order("nom").order("prenom")
+      ]);
+      if (sequence !== tabSequence) return;
+      if (sacramentResult.error) throw sacramentResult.error;
+      if (marriageResult.error) throw marriageResult.error;
+      if (childrenResult.error) throw childrenResult.error;
+
+      const sacraments = sacramentResult.data ?? [];
+      const marriages = marriageResult.data ?? [];
+      const children = childrenResult.data ?? [];
+      const sacramentByType = new Map(sacraments.map((item) => [item.type, item]));
+      const baptism = sacramentByType.get("bapteme");
+      const eucharist = sacramentByType.get("eucharistie");
+      const confirmation = sacramentByType.get("confirmation");
+      const dateFor = (item: {jour:number|null;mois:number|null;annee:number|null;precision:Precision}|undefined): string =>
+        !item || item.precision === "inconnue" ? "" : formatPartialDate(item.jour,item.mois,item.annee,item.precision);
+      const sacramentBlock = (title: string, item: typeof baptism): string => {
+        return '<hr class="my-3 border-0 border-t-2 border-black/70" /><h3 class="text-[13px] font-bold tracking-wide">' + title + '</h3>' +
+          bookletLine("in", item?.lieu) + bookletLine("die", dateFor(item)) + bookletLine("n°", item?.numero_acte) +
+          bookletLine("Suscepit", item?.parrain) + bookletLine("Matrina", item?.marraine) +
+          bookletLine("Ministre", item?.ministre) + bookletLine("Visa", item?.visa);
+      };
+      const marriageLabels: Record<string,string> = {
+        ante_baptismum:"Avant le baptême", post_baptismum:"Après le baptême",
+        obiit_conjux:"Décès du conjoint", novas_nuptias:"Nouvelles noces"
+      };
+      const marriageHtml = marriages.length
+        ? marriages.map((item) => {
+            const spouseBaptism = item.conjoint_bapteme_precision === "inconnue" ? "" : formatPartialDate(item.conjoint_bapteme_jour,item.conjoint_bapteme_mois,item.conjoint_bapteme_annee,item.conjoint_bapteme_precision);
+            const spouseDeath = item.deces_conjoint_precision === "inconnue" ? "" : formatPartialDate(item.deces_conjoint_jour,item.deces_conjoint_mois,item.deces_conjoint_annee,item.deces_conjoint_precision);
+            return '<article class="mb-4"><h3 class="text-[13px] font-bold">' + escapeHtml(marriageLabels[item.type] ?? item.type) + '</h3>' +
+              bookletLine("cum",item.conjoint_nom) + bookletLine("in",item.lieu) + bookletLine("die",dateFor(item)) +
+              bookletLine("n°",item.numero_acte) + bookletLine("Page",item.page_registre) +
+              bookletLine("Bapt. conjoint",item.conjoint_lieu_bapteme) + bookletLine("date bapt.",spouseBaptism) +
+              (item.type === "obiit_conjux" ? bookletLine("Décès",spouseDeath) : "") +
+              bookletLine("Ministre",item.ministre) + bookletLine("Visa",item.visa) + '</article>';
+          }).join('<hr class="my-3 border-0 border-t-2 border-black/70" />')
+        : '<p class="mt-3 text-xs italic text-slate-500">Aucun événement matrimonial enregistré.</p>' + Array.from({length:3},() => bookletLine("in","")).join("");
+      const childSlots = Math.max(5,children.length);
+      const childrenHtml = Array.from({length:childSlots},(_,index) => {
+        const child = children[index];
+        if (!child) {
+          return '<div class="mb-3">' + bookletLine(String(index+1)+")","") + bookletLine("nat","") +
+            bookletLine("bapt. in","") + bookletLine("die","") + bookletLine("n°","") + '</div>';
+        }
+        const childBirth = child.naissance_precision === "inconnue" ? "" : formatPartialDate(child.naissance_jour,child.naissance_mois,child.naissance_annee,child.naissance_precision);
+        const childBaptism = child.bapteme_precision === "inconnue" ? "" : formatPartialDate(child.bapteme_jour,child.bapteme_mois,child.bapteme_annee,child.bapteme_precision);
+        return '<div class="mb-3">' + bookletLine(String(index+1)+")",child.prenom + " " + child.nom) +
+          bookletLine("nat",childBirth) + bookletLine("bapt. in",child.lieu_bapteme) +
+          bookletLine("die",childBaptism) + bookletLine("n°",child.numero_acte) + '</div>';
+      }).join("");
+      const death = faithfulRecord.deces_precision === "inconnue" ? "" : formatPartialDate(faithfulRecord.deces_jour,faithfulRecord.deces_mois,faithfulRecord.deces_annee,faithfulRecord.deces_precision);
+      const birth = faithfulRecord.naissance_precision === "inconnue" ? "" : formatPartialDate(faithfulRecord.naissance_jour,faithfulRecord.naissance_mois,faithfulRecord.naissance_annee,faithfulRecord.naissance_precision);
+      const paletteHtml = canManageFaithful ? '<button type="button" id="faithful-meta-toggle" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Modifier statut / couleur</button>' : '';
       contentEl.innerHTML = `
-        <div class="grid gap-4 lg:grid-cols-2">
-          <section class="page-card p-5"><h2 class="font-semibold text-slate-800">Identité</h2><div class="mt-4 grid gap-3 sm:grid-cols-2">
-            ${renderField("Prénom", faithfulRecord.prenom)}${renderField("Nom", faithfulRecord.nom)}${renderField("Sexe", faithfulRecord.sexe === "masculin" ? "Masculin" : "Féminin")}${renderField("Statut", faithfulRecord.statut === "decede" ? "Décédé" : "Vivant")}
-            ${renderField("Date de naissance", birth)}${renderField("Lieu de naissance", faithfulRecord.lieu_naissance)}
-            ${faithfulRecord.statut === "decede" ? renderField("Date de décès", death) : ""}
-          </div></section>
-          <section class="page-card p-5"><h2 class="font-semibold text-slate-800">Famille et appartenance</h2><div class="mt-4 grid gap-3 sm:grid-cols-2">
-            ${renderField("Nom du père", faithfulRecord.nom_pere)}${renderField("Nom de la mère", faithfulRecord.nom_mere)}
-            ${renderField("Quartier", quartierName)}${renderField("Communauté actuelle", community?.nom ?? "—")}
-            ${renderField("Depuis le", faithfulRecord.communaute_depuis)}
-          </div></section>
+        <div class="space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3">
+            <div><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Livret individuel</p><p class="mt-1 text-xs text-slate-500">Présentation proche du livret papier · consultation</p></div>${paletteHtml}
+          </div>
+          ${canManageFaithful ? `
+          <form id="faithful-meta-form" class="hidden rounded-xl border border-slate-200 bg-white p-4">
+            <div class="grid gap-3 sm:grid-cols-2">
+              <label class="text-xs font-medium text-slate-600">Statut de vie<select id="profile-status" name="statut" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="vivant" ${faithfulRecord.statut === "vivant" ? "selected" : ""}>Vivant</option><option value="decede" ${faithfulRecord.statut === "decede" ? "selected" : ""}>Décédé</option></select></label>
+              <div class="text-xs font-medium text-slate-600">Couleur de la carte<div class="mt-2 grid grid-cols-5 gap-2">${renderCardColorChoices(faithfulRecord.carte_couleur,"profile_carte_couleur")}</div></div>
+            </div>
+            <fieldset id="profile-death-fields" ${faithfulRecord.statut === "decede" ? "" : "disabled"} class="mt-3 rounded-xl bg-slate-50 p-3"><p class="mb-2 text-xs font-semibold text-slate-600">Date du décès (facultative si inconnue)</p>${partialDateFields("profile-death")}</fieldset>
+            <div class="mt-3 flex flex-wrap justify-end gap-2"><button type="button" id="faithful-meta-cancel" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600">Annuler</button><button type="submit" class="rounded-lg bg-[var(--enoria-green)] px-3 py-2 text-xs font-semibold text-white">Enregistrer</button></div><p id="faithful-meta-feedback" class="mt-3 hidden rounded-lg p-3 text-sm" role="status"></p>
+          </form>` : ""}
+          <section class="overflow-hidden rounded-xl border-2 border-black/80 shadow-sm" style="background:${cardGradient(faithfulRecord.carte_couleur)}">
+            <div class="border-b-2 border-black/80 px-4 py-3 text-center"><p class="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-700">Paroisse · ${escapeHtml(getAppConfig().parishName)}</p><h2 class="mt-1 font-serif text-lg font-bold uppercase tracking-widest text-slate-900">Liber memorialis</h2><p class="mt-1 text-[10px] text-slate-600">Fiche personnelle du fidèle</p></div>
+            <div class="grid grid-cols-1 lg:grid-cols-3">
+              <section class="min-w-0 p-4 sm:p-5"><h3 class="mb-2 text-center text-sm font-bold tracking-widest">IDENTITAS</h3>
+                ${bookletLine("Nomen",faithfulRecord.prenom)}${bookletLine("Nomen",faithfulRecord.nom)}${bookletLine("Pater",faithfulRecord.nom_pere)}${bookletLine("Mater",faithfulRecord.nom_mere)}${bookletLine("Nat. in",faithfulRecord.lieu_naissance)}${bookletLine("die",birth)}
+                <hr class="my-3 border-0 border-t-2 border-black/80" /><h3 class="text-[13px] font-bold tracking-wide">BAPTISMUM</h3>
+                ${bookletLine("in",baptism?.lieu)}${bookletLine("die",dateFor(baptism))}${bookletLine("n°",baptism?.numero_acte)}${bookletLine("Suscepit",baptism?.parrain)}${bookletLine("Matrina",baptism?.marraine)}${bookletLine("Quod testor ego",baptism?.ministre)}
+                ${sacramentBlock("EUCHARISTIA",eucharist)}${sacramentBlock("CONFIRMATIO",confirmation)}
+              </section>
+              <section class="min-w-0 border-black/80 p-4 sm:p-5 lg:border-l-2"><h3 class="mb-3 text-center text-[15px] font-bold tracking-widest">MATRIMONIUM</h3>${marriageHtml}
+                <div class="mt-4 border-t-2 border-black/70 pt-3">${bookletLine("Communauté",community?.nom)}${bookletLine("Quartier",quartierName)}${bookletLine("Depuis le",faithfulRecord.communaute_depuis)}${bookletLine("Statut",faithfulRecord.statut === "decede" ? "Décédé" : "Vivant")}${faithfulRecord.statut === "decede" ? bookletLine("Décès",death) : ""}</div>
+              </section>
+              <section class="min-w-0 border-black/80 p-4 sm:p-5 lg:border-l-2"><h3 class="mb-3 text-center text-lg font-bold tracking-[0.2em]">LIBERI</h3>${childrenHtml}${children.length > 5 ? '<p class="mt-2 border-t border-black/50 pt-2 text-[10px] italic text-slate-600">' + children.length + ' enfants enregistrés</p>' : ""}</section>
+            </div>
+            <div class="border-t-2 border-black/80 px-4 py-2 text-center text-[10px] text-slate-600">Enoria · Document de consultation · Les registres papier restent la référence officielle</div>
+          </section>
+          <div class="grid gap-3 sm:grid-cols-2"><section class="rounded-xl border border-slate-200 bg-white p-4"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Date de naissance</p><p class="mt-1 text-sm font-medium text-slate-800">${escapeHtml(birth || "Non renseignée")}</p></section><section class="rounded-xl border border-slate-200 bg-white p-4"><p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Communauté actuelle</p><p class="mt-1 text-sm font-medium text-slate-800">${escapeHtml(community?.nom ?? "—")}</p></section></div>
         </div>`;
+      if (canManageFaithful) {
+        const editor = contentEl.querySelector<HTMLFormElement>("#faithful-meta-form")!;
+        const editorFeedback = editor.querySelector<HTMLElement>("#faithful-meta-feedback")!;
+        const statusSelect = editor.querySelector<HTMLSelectElement>("#profile-status")!;
+        const deathFields = editor.querySelector<HTMLFieldSetElement>("#profile-death-fields")!;
+        const precision = editor.querySelector<HTMLSelectElement>("#profile-death-precision")!;
+        editor.querySelector<HTMLInputElement>("#profile-death-day")!.value = faithfulRecord.deces_jour?.toString() ?? "";
+        editor.querySelector<HTMLInputElement>("#profile-death-month")!.value = faithfulRecord.deces_mois?.toString() ?? "";
+        editor.querySelector<HTMLInputElement>("#profile-death-year")!.value = faithfulRecord.deces_annee?.toString() ?? "";
+        precision.value = faithfulRecord.deces_precision;
+        bindPartialDate(editor,"profile-death");
+        contentEl.querySelector<HTMLButtonElement>("#faithful-meta-toggle")!.addEventListener("click",() => editor.classList.toggle("hidden"));
+        editor.querySelector<HTMLButtonElement>("#faithful-meta-cancel")!.addEventListener("click",() => editor.classList.add("hidden"));
+        statusSelect.addEventListener("change",() => { deathFields.disabled = statusSelect.value !== "decede"; });
+        editor.addEventListener("submit",async(event) => {
+          event.preventDefault();
+          const submit = editor.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+          submit.disabled = true; submit.textContent = "Enregistrement…";
+          try {
+            const nextStatus = statusSelect.value as "vivant" | "decede";
+            const date = nextStatus === "decede" ? collectPartialDate(editor,"profile-death") : {precision:"inconnue" as Precision,jour:null,mois:null,annee:null};
+            const color = editor.querySelector<HTMLInputElement>('input[name="profile_carte_couleur"]:checked')?.value ?? "rose";
+            const {data,error} = await supabase.from("fideles").update({statut:nextStatus,deces_jour:date.jour,deces_mois:date.mois,deces_annee:date.annee,deces_precision:date.precision,carte_couleur:color}).eq("id",faithfulRecord.id).select("*").single();
+            if(error) throw error;
+            Object.assign(faithfulRecord,data);
+            subtitleEl.textContent = (faithfulRecord.sexe === "masculin" ? "Masculin" : "Féminin") + " · " + (faithfulRecord.statut === "decede" ? "Décédé" : "Vivant");
+            await renderGeneral(sequence);
+          } catch(error) {
+            editorFeedback.textContent = error instanceof Error ? error.message : "Modification impossible.";
+            editorFeedback.className = "mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700"; editorFeedback.classList.remove("hidden");
+          } finally { submit.disabled = false; submit.textContent = "Enregistrer"; }
+        });
+      }
     };
 
     async function renderTab(tab: string): Promise<void> {
@@ -806,7 +914,7 @@ export async function mountFaithfulProfile(
           : "profile-tab whitespace-nowrap border-b-2 border-transparent px-4 py-3 text-sm font-medium text-slate-500";
       });
       if (tab === "general") {
-        renderGeneral();
+        await renderGeneral(sequence);
         return;
       }
       contentEl.innerHTML = '<div class="page-card p-6 text-sm text-slate-500">Chargement de cet onglet…</div>';
