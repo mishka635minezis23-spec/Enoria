@@ -32,7 +32,7 @@ body { margin: 0; min-width: 320px; background: var(--enoria-background); color:
 button, a { -webkit-tap-highlight-color: transparent; }
 button { font: inherit; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--enoria-secondary) 45%, transparent);
+  outline: 3px solid #A6D9FF;
   outline-offset: 2px;
 }
 .sidebar-link {
@@ -44,8 +44,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .sidebar-link:hover { background: rgba(255,255,255,.09); color: white; }
 .sidebar-link[aria-current="page"] {
   color: white;
-  background: color-mix(in srgb, var(--enoria-secondary) 24%, transparent);
-  box-shadow: inset 3px 0 var(--enoria-secondary);
+  background: var(--enoria-secondary);
+  box-shadow: inset 3px 0 #FFFFFF;
 }
 .sidebar-link .nav-icon { width: 1.2rem; text-align: center; font-size: 1rem; opacity: .9; }
 .mobile-nav { display: none; }
@@ -66,8 +66,8 @@ input, select, textarea {
 :is([class~="text-emerald-500"],[class~="text-emerald-400"]) { color: var(--enoria-secondary) !important; }
 :is([class~="bg-emerald-50"],[class~="bg-emerald-100"],[class~="bg-emerald-200"]) { background-color: var(--enoria-primary-soft) !important; }
 :is([class~="bg-emerald-600"],[class~="bg-emerald-700"],[class~="bg-emerald-800"]) { background-color: var(--enoria-primary) !important; }
-:is([class~="hover:bg-emerald-700"]:hover,[class~="hover:bg-emerald-800"]:hover) { background-color: color-mix(in srgb, var(--enoria-primary) 84%, black) !important; }
-:is([class~="border-emerald-100"],[class~="border-emerald-200"],[class~="border-emerald-300"]) { border-color: color-mix(in srgb, var(--enoria-primary) 18%, white) !important; }
+:is([class~="hover:bg-emerald-700"]:hover,[class~="hover:bg-emerald-800"]:hover) { background-color: #05158E !important; }
+:is([class~="border-emerald-100"],[class~="border-emerald-200"],[class~="border-emerald-300"]) { border-color: #D8E5FF !important; }
 :is([class~="focus:border-emerald-700"]:focus) { border-color: var(--enoria-primary) !important; }
 :is([class~="focus:ring-emerald-100"]:focus) { --tw-ring-color: var(--enoria-primary-soft) !important; }
 @media (max-width: 767px) {
