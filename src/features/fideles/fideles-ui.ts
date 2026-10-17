@@ -757,43 +757,6 @@ export async function mountFaithfulProfile(
       const confirmation = sacramentByType.get("confirmation");
       const dateFor = (item: {jour:number|null;mois:number|null;annee:number|null;precision:Precision}|undefined): string =>
         !item || item.precision === "inconnue" ? "" : formatPartialDate(item.jour,item.mois,item.annee,item.precision);
-      const sacramentBlock = (title: string, item: typeof baptism): string => {
-        return '<hr class="my-3 border-0 border-t-2 border-black/70" /><h3 class="text-[13px] font-bold tracking-wide">' + title + '</h3>' +
-          bookletLine("in", item?.lieu) + bookletLine("die", dateFor(item)) + bookletLine("n°", item?.numero_acte) +
-          bookletLine("Suscepit", item?.parrain) + bookletLine("Matrina", item?.marraine) +
-          bookletLine("Ministre", item?.ministre) + bookletLine("Visa", item?.visa);
-      };
-      const marriageLabels: Record<string,string> = {
-        ante_baptismum:"Avant le baptême", post_baptismum:"Après le baptême",
-        obiit_conjux:"Décès du conjoint", novas_nuptias:"Nouvelles noces"
-      };
-      const marriageHtml = marriages.length
-        ? marriages.map((item) => {
-            const spouseBaptism = item.conjoint_bapteme_precision === "inconnue" ? "" : formatPartialDate(item.conjoint_bapteme_jour,item.conjoint_bapteme_mois,item.conjoint_bapteme_annee,item.conjoint_bapteme_precision);
-            const spouseDeath = item.deces_conjoint_precision === "inconnue" ? "" : formatPartialDate(item.deces_conjoint_jour,item.deces_conjoint_mois,item.deces_conjoint_annee,item.deces_conjoint_precision);
-            return '<article class="mb-4"><h3 class="text-[13px] font-bold">' + escapeHtml(marriageLabels[item.type] ?? item.type) + '</h3>' +
-              bookletLine("cum",item.conjoint_nom) + bookletLine("in",item.lieu) + bookletLine("die",dateFor(item)) +
-              bookletLine("n°",item.numero_acte) + bookletLine("Page",item.page_registre) +
-              bookletLine("Bapt. conjoint",item.conjoint_lieu_bapteme) + bookletLine("date bapt.",spouseBaptism) +
-              (item.type === "obiit_conjux" ? bookletLine("Décès",spouseDeath) : "") +
-              bookletLine("Ministre",item.ministre) + bookletLine("Visa",item.visa) + '</article>';
-          }).join('<hr class="my-3 border-0 border-t-2 border-black/70" />')
-        : '<p class="mt-3 text-xs italic text-slate-500">Aucun événement matrimonial enregistré.</p>' + Array.from({length:3},() => bookletLine("in","")).join("");
-      const childSlots = Math.max(5,children.length);
-      const childrenHtml = Array.from({length:childSlots},(_,index) => {
-        const child = children[index];
-        if (!child) {
-          return '<div class="mb-3">' + bookletLine(String(index+1)+")","") + bookletLine("nat","") +
-            bookletLine("bapt. in","") + bookletLine("die","") + bookletLine("n°","") + '</div>';
-        }
-        const childBirth = child.naissance_precision === "inconnue" ? "" : formatPartialDate(child.naissance_jour,child.naissance_mois,child.naissance_annee,child.naissance_precision);
-        const childBaptism = child.bapteme_precision === "inconnue" ? "" : formatPartialDate(child.bapteme_jour,child.bapteme_mois,child.bapteme_annee,child.bapteme_precision);
-        return '<div class="mb-3">' + bookletLine(String(index+1)+")",child.prenom + " " + child.nom) +
-          bookletLine("nat",childBirth) + bookletLine("bapt. in",child.lieu_bapteme) +
-          bookletLine("die",childBaptism) + bookletLine("n°",child.numero_acte) + '</div>';
-      }).join("");
-      const death = faithfulRecord.deces_precision === "inconnue" ? "" : formatPartialDate(faithfulRecord.deces_jour,faithfulRecord.deces_mois,faithfulRecord.deces_annee,faithfulRecord.deces_precision);
-      const birth = faithfulRecord.naissance_precision === "inconnue" ? "" : formatPartialDate(faithfulRecord.naissance_jour,faithfulRecord.naissance_mois,faithfulRecord.naissance_annee,faithfulRecord.naissance_precision);
       const paletteHtml = canManageFaithful ? '<button type="button" id="faithful-meta-toggle" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Modifier statut / couleur</button>' : '';
       const relatedIds = [...new Set(marriages.flatMap((item) => [
         item.fidele_id !== faithfulRecord.id ? item.fidele_id : null,
@@ -1000,8 +963,6 @@ export async function mountFaithfulProfile(
           const fieldLabel = "block text-xs font-medium text-slate-600";
           const fieldClass = "mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm";
           const selected = (actual: string | null | undefined, value: string): string => actual === value ? "selected" : "";
-          const yearOptions = years.map((item) => '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.libelle) + '</option>').join("");
-          const communityOptions = communities.map((item) => '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.nom) + '</option>').join("");
           const lookupsReady = years.length > 0 && communities.length > 0;
 
           const initializePartialDate = (
@@ -1229,7 +1190,7 @@ export async function mountFaithfulProfile(
               precision:record.conjoint_bapteme_precision,jour:record.conjoint_bapteme_jour,mois:record.conjoint_bapteme_mois,annee:record.conjoint_bapteme_annee
             } : null);
             initializePartialDate(form,deathPrefix,record ? {
-              precision:record.deces_conjoint_precision,jour:record.deces_conjoint_jour,mois:record.deces_conjoint_annee ? record.deces_conjoint_mois : null,annee:record.deces_conjoint_annee
+              precision:record.deces_conjoint_precision,jour:record.deces_conjoint_jour,mois:record.deces_conjoint_mois,annee:record.deces_conjoint_annee
             } : null);
             const yearSelect = form.querySelector<HTMLSelectElement>('select[name="annee_pastorale_id"]')!;
             const communitySelect = form.querySelector<HTMLSelectElement>('select[name="communaute_historique_id"]')!;
