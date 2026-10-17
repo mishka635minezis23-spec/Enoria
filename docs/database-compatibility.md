@@ -4,7 +4,7 @@
 
 ## Modèle déjà présent
 
-- `fideles` : identité, naissance, décès, communauté actuelle, statut de vie et `carte_couleur` (`rose`, `bleu`, `lavande`, `sauge`, `or`, avec `rose` par défaut).
+- `fideles` : identité, naissance, décès, communauté actuelle, statut de vie et `carte_couleur` (`rose`, `bleu`, `lavande`, `sauge`, `or` ; `rose` par défaut).
 - `sacrements` : baptême, eucharistie et confirmation ; date à précision contrôlée, communauté historique, numéro d'acte et page.
 - `evenements_matrimoniaux` : événements matrimoniaux et informations du conjoint.
 - `quartiers` et `communautes` : structure territoriale.
@@ -19,7 +19,7 @@ Les types TypeScript de cette structure sont générés dans `src/types/database
 Toutes les tables publiques examinées ont RLS activé. Les rôles existants sont `responsable`, `secretaire` et `cure`.
 
 - Lecture des fidèles : secrétaire/curé ou responsable de leur communauté.
-- Insertion directe d'un fidèle : secrétaire/curé ou responsable de sa communauté, si la communauté est active. L'inscription complète fidèle + baptême via `enregistrer_fidele_baptise(jsonb)` est volontairement réservée au secrétaire/curé.
+- Insertion directe d'un fidèle : secrétaire/curé ou responsable de sa communauté, si la communauté est active. L'inscription complète avec baptême via `enregistrer_fidele_baptise(jsonb)` est réservée au secrétaire/curé.
 - Modification et suppression d'un fidèle : secrétaire/curé dans leur paroisse.
 - Écriture des sacrements : secrétaire/curé. Le responsable de communauté a une politique de lecture, pas d'écriture.
 - Dîmes : lecture et écriture secrétaire/curé.
@@ -36,10 +36,10 @@ Toutes les tables publiques examinées ont RLS activé. Les rôles existants son
 
 ## Blocages fonctionnels qui restent à résoudre
 
-1. **Modification de la carte de baptême** : la modification de l'identité et du baptême touche deux tables. L'édition complète de ces données doit passer par une fonction transactionnelle dédiée afin d'éviter une mise à jour partielle.
-2. **Duplicatas de mariage** : les RPC de duplicata acceptent un identifiant de sacrement, et la table certificats référence les sacrements. Le parcours de duplicata pour un événement matrimonial nécessite une évolution du modèle et une fonction RPC dédiée.
-3. **Organisation** : la création des quartiers et communautés est disponible pour le curé et le secrétaire. La modification, la désactivation et la suppression depuis l'interface restent à implémenter.
-4. **Profil et comptes** : le profil utilisateur est créé par un trigger depuis Auth ; les affectations de rôle sont gérées séparément. L'interface ne déduit jamais un rôle de user_metadata.
+1. **Modification de la carte de baptême** : la modification de l'identité et du baptême touche deux tables. L'édition complète doit passer par une fonction transactionnelle dédiée afin d'éviter une mise à jour partielle.
+2. **Duplicatas de mariage** : les RPC de duplicata acceptent un identifiant de sacrement et la table certificats référence les sacrements. Le duplicata d'un événement matrimonial demande une évolution de modèle et une RPC dédiée.
+3. **Organisation** : la création des quartiers et communautés est disponible pour le curé et la secrétaire. La modification, la désactivation et la suppression depuis l'interface restent à implémenter.
+4. **Profil et comptes** : le profil utilisateur est créé par un trigger depuis Auth ; les affectations de rôle sont gérées séparément.
 
 ## Alertes de l'analyse Supabase
 
@@ -55,9 +55,9 @@ Les vues statistiques examinées utilisent `security_invoker=true`, ce qui est l
 - Connexion Supabase Auth par mot de passe, chargement du profil et des affectations actives.
 - Navigation filtrée par rôle ; RLS reste la protection réelle.
 - Tableau de bord et statistiques calculés depuis les vues existantes.
-- Liste et fiche du fidèle ; six onglets : Général (livret), Sacrements, Dîmes, Famille, Historique et Documents.
-- Inscription progressive fidèle + baptême via `enregistrer_fidele_baptise(jsonb)`, avec ajout facultatif d'Eucharistie, Confirmation, événements matrimoniaux et jusqu'à cinq fiches enfant dans le parcours initial.
-- Modification du statut de vie et de la couleur de carte depuis la fiche ; couleurs autorisées limitées à cinq.
+- Liste et fiche du fidèle ; onglets Général (livret), Sacrements, Dîmes, Famille, Historique et Documents.
+- Inscription progressive fidèle + baptême par `enregistrer_fidele_baptise(jsonb)`, avec ajout facultatif d'Eucharistie, Confirmation, événements matrimoniaux et de 1 à 5 enfants saisis dans le parcours initial.
+- Modification du statut de vie et de la couleur de carte depuis la fiche ; palette limitée à cinq couleurs.
 - Ajout d'Eucharistie et de Confirmation via INSERT contrôlé par RLS et contraintes existantes.
 - Dîmes via upsert sur la contrainte unique.
 - Demande, décision et émission de duplicata via les RPC auditées ; PDF généré localement après validation du curé. Aucun PDF ni scan n'est envoyé ou stocké dans Supabase ; si le fichier émis est perdu, une nouvelle demande doit être créée afin de conserver la traçabilité.
@@ -68,7 +68,7 @@ Les vues statistiques examinées utilisent `security_invoker=true`, ce qui est l
 - Ne jamais exposer `service_role` ou une clé secrète dans le navigateur.
 - Le client utilisera uniquement l'URL du projet et une clé publishable/anon.
 - Les contrôles visuels de rôle ne remplacent jamais RLS.
-- Ne pas créer un fidèle sans les références obligatoires de baptême (numéro d'acte et page du registre).
+- Ne pas créer un fidèle sans les références obligatoires du baptême (numéro d'acte et page du registre).
 - L'inscription du fidèle et du baptême doit être atomique via `enregistrer_fidele_baptise(jsonb)`.
 - Ne jamais compléter une date incertaine par supposition.
 - Toute modification SQL doit être présentée, expliquée et approuvée avant exécution.

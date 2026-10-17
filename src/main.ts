@@ -213,7 +213,7 @@ function renderApplication(context: UserContext, activePastoralYear: ActivePasto
         if (sequence !== renderSequence) cleanup();
         else activePageCleanup = cleanup;
       } else if (route === "fideles") {
-        mountFaithfulList(content);
+        mountFaithfulList(content, context, activePastoralYear);
       }
       window.scrollTo({ top: 0, behavior: "auto" });
     } catch {
