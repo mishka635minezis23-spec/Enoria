@@ -1,6 +1,6 @@
 # Compatibilité avec le schéma Supabase existant
 
-État vérifié le 16 octobre 2026 en lecture seule. Ce document décrit les capacités observées ; il ne constitue pas une autorisation de modifier la base.
+État vérifié le 17 octobre 2026. Les politiques RLS et privilèges décrits ci-dessous correspondent aux modifications appliquées dans le projet Supabase PNDA et versionnées dans supabase/migrations/.
 
 ## Modèle déjà présent
 
@@ -20,25 +20,28 @@ Toutes les tables publiques examinées ont RLS activé. Les rôles existants son
 
 - Lecture des fidèles : secrétaire/curé ou responsable de leur communauté.
 - Insertion d'un fidèle : secrétaire/curé ou responsable de sa communauté, si la communauté est active.
-- Modification d'un fidèle : secrétaire/curé.
+- Modification et suppression d'un fidèle : secrétaire/curé dans leur paroisse.
 - Écriture des sacrements : secrétaire/curé. Le responsable de communauté a une politique de lecture, pas d'écriture.
 - Dîmes : lecture et écriture secrétaire/curé.
+- Quartiers et communautés : création, consultation, modification et suppression par le secrétaire/curé de la paroisse concernée. Les responsables de communauté ne disposent pas des droits d'administration territoriale.
+- Certificats : gestion par secrétaire/curé uniquement lorsque le sacrement lié appartient à leur paroisse et que le fidèle correspond au sacrement.
+- Affectations utilisateurs : gestion complète par le curé ; le secrétaire peut gérer les affectations ordinaires mais ne peut pas attribuer ni modifier le rôle cure.
+- Profils utilisateurs : le secrétaire/curé peut lire les profils affectés à sa paroisse et modifier uniquement le nom complet et le téléphone. La création et la suppression des profils restent hors de l'API cliente.
+- Historique : les entrées existantes de l'historique restent non modifiables ; le rôle administrateur peut ajouter une entrée de journal liée à un fidèle de sa paroisse.
 - Mentions du livret : écriture via la fonction `synchroniser_mention_livret`.
 - Duplicatas : fonctions `demander_duplicata`, `decider_duplicata` et `marquer_certificat_emis`, avec contrôles de rôle dans les fonctions examinées. L'application passe par ces RPC ; aucun INSERT direct dans `certificats`.
 - Dîmes : la contrainte unique `(fidele_id, annee_pastorale_id)` permet une seule ligne par fidèle et par année ; l'interface utilise un upsert protégé par RLS.
 - Sacrements : l'interface permet l'ajout d'Eucharistie et de Confirmation pour secrétaire/curé. Elle impose l'acte et la page ; la contrainte SQL existante les vérifie lorsque `reference_registre_requise=true`.
 - Transfert de communauté : fonction `transferer_fidele`, réservée au secrétaire/curé et limitée à une communauté de la même paroisse.
 
-## Blocages fonctionnels à résoudre avant les écrans d'écriture
+## Blocages fonctionnels qui restent à résoudre
 
-1. **Quartiers et communautés** : seules des politiques SELECT ont été observées. Les actions créer/modifier/désactiver ne doivent pas être activées dans l'interface avant qu'une voie d'écriture sûre soit approuvée et mise en place.
-2. **Création fidèle + baptême atomique** : aucune fonction transactionnelle dédiée n'a été trouvée lors de l'inventaire. Les politiques actuelles permettent à un responsable de communauté d'insérer un fidèle, mais pas le sacrement correspondant. Deux appels client séparés ne garantissent pas l'atomicité. Il faudra une fonction transactionnelle contrôlée côté base ou restreindre le parcours à un rôle autorisé ; aucune de ces options ne sera appliquée sans validation.
-3. **Mariages** : `evenements_matrimoniaux` ne possède pas de contrainte imposant le numéro d'acte et la page du registre. L'écriture des événements matrimoniaux reste donc désactivée dans l'interface, même si le formulaire pourrait les demander.
-4. **Duplicatas de mariage** : les RPC de duplicata acceptent un identifiant de `sacrements`, et la table `certificats` référence `sacrements`. Le parcours de duplicata pour un événement matrimonial nécessite une évolution du modèle et une fonction RPC dédiée.
-5. **Création fidèle + baptême atomique** : aucune fonction transactionnelle dédiée n'a été trouvée lors de l'inventaire. Les politiques actuelles permettent l'insertion d'un fidèle selon le rôle et la communauté, mais deux appels client séparés ne garantissent pas l'atomicité. Le bouton d'inscription reste désactivé jusqu'à une fonction transactionnelle contrôlée côté base.
-6. **Modification de la carte de baptême** : la modification de l'identité et du baptême touche deux tables. L'interface la laisse désactivée jusqu'à une fonction atomique afin d'éviter une mise à jour partielle.
-7. **Organisation** : les quartiers et communautés restent en lecture seule, faute de politiques d'écriture observées.
-8. **Profil et comptes** : le profil utilisateur est créé par un trigger depuis Auth ; les affectations de rôle sont gérées séparément. L'interface ne déduit jamais un rôle de `user_metadata`.
+1. **Création fidèle + baptême atomique** : aucune fonction transactionnelle dédiée n'a été trouvée. Les politiques permettent à un responsable de communauté d'insérer un fidèle, mais pas le sacrement correspondant. Deux appels client séparés ne garantissent pas l'atomicité ; ce parcours doit rester limité à un rôle autorisé ou passer par une fonction transactionnelle contrôlée côté base.
+2. **Mariages** : l'interface garde l'écriture des événements matrimoniaux désactivée car le modèle n'impose pas le numéro d'acte et la page du registre. Une règle métier explicite est nécessaire avant d'activer ce parcours.
+3. **Duplicatas de mariage** : les RPC de duplicata acceptent un identifiant de sacrements, et la table certificats référence sacrements. Le parcours de duplicata pour un événement matrimonial nécessite une évolution du modèle et une fonction RPC dédiée.
+4. **Modification de la carte de baptême** : la modification de l'identité et du baptême touche deux tables. L'interface la laisse désactivée jusqu'à une fonction atomique afin d'éviter une mise à jour partielle.
+5. **Organisation** : la création des quartiers et communautés est maintenant disponible pour le curé et le secrétaire. La modification, la désactivation et la suppression depuis l'interface ne sont pas encore implémentées ; les politiques RLS et les privilèges SQL restent en place comme deuxième niveau de protection.
+6. **Profil et comptes** : le profil utilisateur est créé par un trigger depuis Auth ; les affectations de rôle sont gérées séparément. L'interface ne déduit jamais un rôle de user_metadata.
 
 ## Alertes de l'analyse Supabase
 
