@@ -25,14 +25,28 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => replacements[character] ?? character);
 }
 
+type AppearanceMode = "light" | "dark";
+const APPEARANCE_STORAGE_KEY = "enoria:appearance";
+
+function readAppearance(): AppearanceMode {
+  try { return localStorage.getItem(APPEARANCE_STORAGE_KEY) === "dark" ? "dark" : "light"; }
+  catch { return "light"; }
+}
+
+function applyAppearance(mode: AppearanceMode): void {
+  document.documentElement.dataset.theme = mode;
+  document.documentElement.style.colorScheme = mode;
+  const config = getAppConfig();
+  document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    ?.setAttribute("content", mode === "dark" ? "#07111F" : config.theme.primaryDark);
+}
+
 function applyTheme(): void {
   const config = getAppConfig();
   document.documentElement.style.setProperty("--enoria-green", config.theme.primary);
   document.documentElement.style.setProperty("--enoria-deep", config.theme.primaryDark);
   document.documentElement.style.setProperty("--enoria-surface", config.theme.surface);
-  document.body.style.backgroundColor = config.theme.surface;
-  document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
-    ?.setAttribute("content", config.theme.primaryDark);
+  document.body.style.removeProperty("background-color");
 }
 
 let removeAppListeners: (() => void) | null = null;
@@ -46,6 +60,7 @@ async function bootstrap(): Promise<void> {
   activePageCleanup?.();
   activePageCleanup = null;
   applyTheme();
+  applyAppearance(readAppearance());
   const config = getAppConfig();
 
   if (!hasSupabaseConfig(config)) {
@@ -118,6 +133,7 @@ function renderApplication(context: UserContext, activePastoralYear: ActivePasto
             <p class="topbar-role">${escapeHtml(rolesLabel)}</p>
           </div>
           <div class="topbar-avatar" aria-label="Compte utilisateur">${escapeHtml(initials)}</div>
+          <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Activer le mode sombre" aria-pressed="false" title="Activer le mode sombre">☾</button>
           <button id="signout" class="rounded-lg border px-3 py-2 text-xs font-semibold" title="Fermer la session">Sortir</button>
         </div>
       </header>
@@ -157,6 +173,22 @@ function renderApplication(context: UserContext, activePastoralYear: ActivePasto
   if (dateNode) {
     dateNode.textContent = new Intl.DateTimeFormat(config.locale, { dateStyle: "full" }).format(new Date());
   }
+  const themeButton = shell.querySelector<HTMLButtonElement>("#theme-toggle");
+  const syncThemeButton = (): void => {
+    if (!themeButton) return;
+    const dark = document.documentElement.dataset.theme === "dark";
+    themeButton.textContent = dark ? "☀" : "☾";
+    themeButton.title = dark ? "Activer le mode clair" : "Activer le mode sombre";
+    themeButton.setAttribute("aria-label", themeButton.title);
+    themeButton.setAttribute("aria-pressed", String(dark));
+  };
+  syncThemeButton();
+  themeButton?.addEventListener("click", () => {
+    const nextMode: AppearanceMode = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    try { localStorage.setItem(APPEARANCE_STORAGE_KEY, nextMode); } catch { /* Le thème reste actif pour cette session. */ }
+    applyAppearance(nextMode);
+    syncThemeButton();
+  });
 
   function closeMenu(): void {
     sidebar.dataset.open = "false";

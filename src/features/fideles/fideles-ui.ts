@@ -13,6 +13,30 @@ import {
 type Precision = Database["public"]["Enums"]["precision_date"];
 type Community = Tables<"communautes">;
 type Quartier = Tables<"quartiers">;
+type CommunityChoice = Pick<Community, "id" | "nom" | "quartier_id">;
+
+function bindNeighborhoodCommunity(
+  form: HTMLFormElement,
+  quartierFieldName: string,
+  communityFieldName: string,
+  communities: readonly CommunityChoice[],
+  selectedCommunityId?: string | null
+): void {
+  const quartierSelect = form.querySelector<HTMLSelectElement>(`select[name="${quartierFieldName}"]`);
+  const communitySelect = form.querySelector<HTMLSelectElement>(`select[name="${communityFieldName}"]`);
+  if (!quartierSelect || !communitySelect) return;
+  const selectedCommunity = selectedCommunityId ? communities.find((item) => item.id === selectedCommunityId) : undefined;
+  if (selectedCommunity) quartierSelect.value = selectedCommunity.quartier_id;
+  const syncCommunities = (preferredId = ""): void => {
+    const allowed = communities.filter((item) => Boolean(quartierSelect.value) && item.quartier_id === quartierSelect.value);
+    communitySelect.innerHTML = '<option value="">Choisir une communauté…</option>' + allowed
+      .map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.nom)}</option>`).join("");
+    communitySelect.disabled = !quartierSelect.value;
+    if (preferredId && allowed.some((item) => item.id === preferredId)) communitySelect.value = preferredId;
+  };
+  syncCommunities(selectedCommunity?.id ?? communitySelect.value);
+  quartierSelect.addEventListener("change", () => syncCommunities());
+}
 
 const PAGE_SIZE = 20;
 
@@ -53,7 +77,6 @@ export function mountFaithfulList(container: HTMLElement, context: UserContext, 
   const rowsNode = container.querySelector<HTMLElement>("#faithful-rows");
   const feedback = container.querySelector<HTMLElement>("#faithful-feedback");
   const countNode = container.querySelector<HTMLElement>("#faithful-count");
-  const suggestionsNode = container.querySelector<HTMLElement>("#faithful-search-suggestions");
   const pageNode = container.querySelector<HTMLElement>("#faithful-page");
   const previous = container.querySelector<HTMLButtonElement>("#faithful-prev");
   const next = container.querySelector<HTMLButtonElement>("#faithful-next");
@@ -239,41 +262,16 @@ export function mountFaithfulList(container: HTMLElement, context: UserContext, 
     writeListParams(current);
     void loadRows();
   });
-  let suggestionSequence = 0;
-  let suggestionTimer: number | undefined;
-  async function loadFaithfulSuggestions(): Promise<void> {
-    if (!suggestionsNode) return;
-    const term = safeSearchTerm(searchEl.value);
-    const sequence = ++suggestionSequence;
-    if (term.length < 2) { suggestionsNode.classList.add("hidden"); suggestionsNode.innerHTML = ""; return; }
-    const tokens = term.split(/\s+/).filter(Boolean);
-    const expression = tokens.map((part) => `prenom.ilike.%${part}%,nom.ilike.%${part}%`).join(",");
-    const result = await getSupabaseClient().from("fideles").select("id,prenom,nom").or(expression).order("nom").limit(8);
-    if (sequence !== suggestionSequence) return;
-    if (result.error) { suggestionsNode.classList.add("hidden"); return; }
-    suggestionsNode.innerHTML = (result.data ?? []).map((item) =>
-      `<button type="button" data-suggest-fidele="${escapeHtml(item.id)}" data-suggest-name="${escapeHtml(item.prenom + " " + item.nom)}" class="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-emerald-50">${escapeHtml(item.prenom)} ${escapeHtml(item.nom)}</button>`
-    ).join("") || '<p class="px-3 py-2 text-xs text-slate-400">Aucune proposition.</p>';
-    suggestionsNode.classList.remove("hidden");
-  }
+  let searchDebounce: number | undefined;
   searchEl.addEventListener("input", () => {
-    if (suggestionTimer !== undefined) window.clearTimeout(suggestionTimer);
-    suggestionTimer = window.setTimeout(() => void loadFaithfulSuggestions(), 180);
-  });
-  searchEl.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") suggestionsNode?.classList.add("hidden");
-  });
-  container.addEventListener("click", (event) => {
-    const target = event.target as HTMLElement;
-    const suggestion = target.closest<HTMLButtonElement>("[data-suggest-fidele]");
-    if (suggestion) {
-      searchEl.value = suggestion.dataset.suggestName ?? "";
-      suggestionsNode?.classList.add("hidden");
+    if (searchDebounce !== undefined) window.clearTimeout(searchDebounce);
+    searchDebounce = window.setTimeout(() => {
       persistFilters(true);
       void loadRows();
-      return;
-    }
-    const button = target.closest<HTMLButtonElement>("[data-open-fidele]");
+    }, 260);
+  });
+  container.addEventListener("click", (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-open-fidele]");
     if (button?.dataset.openFidele) navigateToFaithful(button.dataset.openFidele);
   });
 
@@ -327,11 +325,12 @@ function mountFaithfulCreateWizard(
   const labelClass = "text-xs font-medium text-slate-600";
   const inputClass = "mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm";
   const selectClass = "mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm";
-  const buildSacrementFields = (prefix: string, years: string, communities: string, optional: boolean): string => {
+  const buildSacrementFields = (prefix: string, years: string, quartiers: string, communities: string, optional: boolean): string => {
     const check = optional ? '<label class="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800"><input id="enable-' + prefix + '" type="checkbox" class="rounded border-slate-300" /> Ajouter ' + (prefix === "new-eucharistie" ? "l’Eucharistie" : "la Confirmation") + '</label>' : "";
     return check + '<fieldset id="' + prefix + '-fieldset" ' + (optional ? "disabled" : "") + ' class="space-y-3 ' + (optional ? "rounded-xl border border-slate-100 p-3" : "") + '">' +
-      '<div class="grid gap-3 sm:grid-cols-2"><label class="' + labelClass + '">Année pastorale<select name="' + prefix + '-year" required class="' + selectClass + '">' + years + '</select></label>' +
-      '<label class="' + labelClass + '">Communauté de célébration<select name="' + prefix + '-community" required class="' + selectClass + '">' + communities + '</select></label></div>' +
+      '<div class="grid gap-3 sm:grid-cols-2"><label class="' + labelClass + '">Quartier *<select name="' + prefix + '-quartier" required class="' + selectClass + '">' + quartiers + '</select></label>' +
+      '<label class="' + labelClass + '">Communauté de célébration *<select name="' + prefix + '-community" required class="' + selectClass + '">' + communities + '</select></label></div>' +
+      '<label class="' + labelClass + '">Année pastorale<select name="' + prefix + '-year" required class="' + selectClass + '">' + years + '</select></label>' +
       '<div><p class="mb-2 text-xs font-semibold text-slate-600">Date</p>' + partialDateFields(prefix) + '</div>' +
       '<div class="grid gap-3 sm:grid-cols-2"><label class="' + labelClass + '">Lieu<input name="' + prefix + '-lieu" maxlength="160" class="' + inputClass + '" /></label>' +
       '<label class="' + labelClass + '">Ministre<input name="' + prefix + '-ministre" maxlength="160" class="' + inputClass + '" /></label>' +
@@ -375,7 +374,8 @@ function mountFaithfulCreateWizard(
       if (!years.length) throw new Error("Crée d’abord une année pastorale dans Paramètres avant d’enregistrer un fidèle.");
       if (!communities.length) throw new Error("Aucune communauté active n’est disponible pour cette paroisse.");
       const yearOptions = years.map((item) => '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.libelle) + '</option>').join("");
-      const communityOptions = communities.map((item) => '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.nom) + '</option>').join("");
+      const quartierOptions = '<option value="">Choisir un quartier…</option>' + quartiers.map((item) => '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.nom) + '</option>').join("");
+      const communityOptions = '<option value="">Choisir une communauté…</option>' + communities.map((item) => '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.nom) + '</option>').join("");
       root.innerHTML =
         '<div id="faithful-create-overlay" class="fixed inset-0 z-[80] overflow-y-auto bg-slate-950/60 p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="faithful-create-title">' +
         '<div class="mx-auto my-2 w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl sm:my-6">' +
@@ -391,12 +391,12 @@ function mountFaithfulCreateWizard(
         '<div class="rounded-xl border border-slate-100 p-4"><h3 class="font-semibold text-slate-800">Parents</h3><div class="mt-3 grid gap-3 sm:grid-cols-2"><label class="' + labelClass + '">Nom du père<input name="nom_pere" maxlength="160" class="' + inputClass + '" /></label><label class="' + labelClass + '">Nom de la mère<input name="nom_mere" maxlength="160" class="' + inputClass + '" /></label></div></div>' +
         '<div class="rounded-xl border border-slate-100 p-4"><h3 class="font-semibold text-slate-800">Statut de vie</h3><label class="' + labelClass + ' mt-3 block">Statut<select id="new-status" name="statut" class="' + selectClass + '"><option value="vivant">Vivant</option><option value="decede">Décédé</option></select></label><fieldset id="new-death-fields" disabled class="mt-3 rounded-xl bg-slate-50 p-3"><p class="mb-2 text-xs font-semibold text-slate-600">Date de décès (si connue)</p>' + partialDateFields("new-death") + '</fieldset></div>' +
         '<div class="rounded-xl border border-slate-100 p-4"><h3 class="font-semibold text-slate-800">Couleur de la carte</h3><p class="mt-1 text-xs text-slate-500">Cinq couleurs maximum ; le rose poudré est appliqué par défaut.</p><div class="mt-3 grid grid-cols-5 gap-2">' + renderCardColorChoices("rose", "carte_couleur") + '</div></div></section>' +
-        '<section data-wizard-step="2" class="hidden space-y-4"><div class="rounded-xl border border-rose-100 bg-rose-50/40 p-4"><h3 class="font-semibold text-slate-900">Baptême · obligatoire</h3><p class="mt-1 text-xs leading-5 text-slate-600">Le fidèle et son baptême seront enregistrés ensemble. Le numéro d’acte et la page sont requis.</p><div class="mt-4">' + buildSacrementFields("new-bapteme", yearOptions, communityOptions, false) + '</div></div>' +
-        '<div class="rounded-xl border border-slate-100 p-4"><h3 class="mb-3 font-semibold text-slate-800">Autres sacrements (facultatifs)</h3>' + buildSacrementFields("new-eucharistie", yearOptions, communityOptions, true) + '<div class="my-4 border-t border-slate-100"></div>' + buildSacrementFields("new-confirmation", yearOptions, communityOptions, true) + '</div></section>' +
+        '<section data-wizard-step="2" class="hidden space-y-4"><div class="rounded-xl border border-rose-100 bg-rose-50/40 p-4"><h3 class="font-semibold text-slate-900">Baptême · obligatoire</h3><p class="mt-1 text-xs leading-5 text-slate-600">Le fidèle et son baptême seront enregistrés ensemble. Le numéro d’acte et la page sont requis.</p><div class="mt-4">' + buildSacrementFields("new-bapteme", yearOptions, quartierOptions, communityOptions, false) + '</div></div>' +
+        '<div class="rounded-xl border border-slate-100 p-4"><h3 class="mb-3 font-semibold text-slate-800">Autres sacrements (facultatifs)</h3>' + buildSacrementFields("new-eucharistie", yearOptions, quartierOptions, communityOptions, true) + '<div class="my-4 border-t border-slate-100"></div>' + buildSacrementFields("new-confirmation", yearOptions, quartierOptions, communityOptions, true) + '</div></section>' +
         '<section data-wizard-step="3" class="hidden space-y-4"><div class="rounded-xl border border-slate-100 p-4"><div class="flex items-start justify-between gap-3"><div><h3 class="font-semibold text-slate-800">Enfants</h3><p class="mt-1 text-xs text-slate-500">Ajoute uniquement les enfants dont tu connais les informations.</p></div><button id="faithful-add-child" type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700">＋ Ajouter un enfant</button></div><div id="faithful-child-list" class="mt-3 space-y-3"></div><p class="mt-2 text-[11px] text-slate-400">Les emplacements laissés vides ne sont pas enregistrés.</p></div>' +
         '<div class="rounded-xl border border-slate-100 p-4"><label class="flex items-center gap-2 text-sm font-semibold text-slate-800"><input id="enable-marriage" type="checkbox" class="rounded border-slate-300" /> Enregistrer un événement matrimonial</label><fieldset id="new-marriage-fields" disabled class="mt-4 space-y-3">' +
-        '<div class="grid gap-3 sm:grid-cols-2"><label class="' + labelClass + '">Type d’événement<select name="marriage_type" class="' + selectClass + '"><option value="post_baptismum">Mariage après baptême</option><option value="ante_baptismum">Mention avant baptême</option><option value="novas_nuptias">Nouvelles noces</option><option value="obiit_conjux">Décès du conjoint</option></select></label><label class="' + labelClass + '">Conjoint(e)<input name="marriage_spouse" maxlength="160" class="' + inputClass + '" /></label>' +
-        '<label class="' + labelClass + '">Année pastorale<select name="marriage_year" required class="' + selectClass + '">' + yearOptions + '</select></label><label class="' + labelClass + '">Communauté de l’événement<select name="marriage_community" required class="' + selectClass + '">' + communityOptions + '</select></label></div>' +
+        '<div class="grid gap-3 sm:grid-cols-2"><label class="' + labelClass + '">Quartier de l’événement *<select name="marriage_quartier" required class="' + selectClass + '">' + quartierOptions + '</select></label><label class="' + labelClass + '">Communauté de l’événement *<select name="marriage_community" required class="' + selectClass + '">' + communityOptions + '</select></label>' +
+        '<label class="' + labelClass + '">Type d’événement<select name="marriage_type" class="' + selectClass + '"><option value="post_baptismum">Mariage après baptême</option><option value="ante_baptismum">Mention avant baptême</option><option value="novas_nuptias">Nouvelles noces</option><option value="obiit_conjux">Décès du conjoint</option></select></label><label class="' + labelClass + '">Conjoint(e)<input name="marriage_spouse" maxlength="160" class="' + inputClass + '" /></label><label class="' + labelClass + '">Année pastorale<select name="marriage_year" required class="' + selectClass + '">' + yearOptions + '</select></label></div>' +
         '<div><p class="mb-2 text-xs font-semibold text-slate-600">Date de l’événement</p>' + partialDateFields("new-marriage") + '</div>' +
         '<div class="grid gap-3 sm:grid-cols-2"><label class="' + labelClass + '">Lieu<input name="marriage_lieu" maxlength="160" class="' + inputClass + '" /></label><label class="' + labelClass + '">Ministre<input name="marriage_ministre" maxlength="160" class="' + inputClass + '" /></label><label class="' + labelClass + '">N° d’acte<input name="marriage_acte" maxlength="80" class="' + inputClass + '" /></label><label class="' + labelClass + '">Page du registre<input name="marriage_page" maxlength="80" class="' + inputClass + '" /></label><label class="' + labelClass + '">Visa / observation<input name="marriage_visa" maxlength="160" class="' + inputClass + '" /></label><label class="' + labelClass + '">Lieu de baptême du conjoint<input name="marriage_spouse_baptism_place" maxlength="160" class="' + inputClass + '" /></label></div>' +
         '<div><p class="mb-2 text-xs font-semibold text-slate-600">Baptême du conjoint (facultatif)</p>' + partialDateFields("new-spouse-baptism") + '</div>' +
@@ -405,6 +405,11 @@ function mountFaithfulCreateWizard(
 
       const overlay = root.querySelector<HTMLElement>("#faithful-create-overlay")!;
       const form = root.querySelector<HTMLFormElement>("#faithful-create-form")!;
+      bindNeighborhoodCommunity(form, "quartier_id", "communaute_id", communities);
+      for (const prefix of ["new-bapteme", "new-eucharistie", "new-confirmation"]) {
+        bindNeighborhoodCommunity(form, prefix + "-quartier", prefix + "-community", communities);
+      }
+      bindNeighborhoodCommunity(form, "marriage_quartier", "marriage_community", communities);
       const feedback = root.querySelector<HTMLElement>("#faithful-create-feedback")!;
       const progress = root.querySelector<HTMLElement>("#faithful-wizard-progress")!;
       const next = root.querySelector<HTMLButtonElement>("#faithful-wizard-next")!;
@@ -1118,12 +1123,13 @@ export async function mountFaithfulProfile(
       contentEl.innerHTML = '<div class="page-card p-6 text-sm text-slate-500">Chargement de cet onglet…</div>';
       try {
         if (tab === "sacrements") {
-          const [sacramentResult, marriageResult, mentionResult, yearResult, communityResult, partnerResult] = await Promise.all([
+          const [sacramentResult, marriageResult, mentionResult, yearResult, communityResult, quartierResult, partnerResult] = await Promise.all([
             supabase.from("sacrements").select("*").eq("fidele_id", faithfulRecord.id).order("annee", { ascending: true }),
             supabase.from("evenements_matrimoniaux").select("*").or("fidele_id.eq." + faithfulRecord.id + ",conjoint_fidele_id.eq." + faithfulRecord.id).order("annee", { ascending: true }),
             supabase.from("mentions_livret").select("*").eq("fidele_id", faithfulRecord.id).order("created_at", { ascending: false }),
             supabase.from("annees_pastorales").select("id,libelle,date_debut,active").eq("paroisse_id", faithfulRecord.paroisse_id).order("date_debut", { ascending: false }),
-            supabase.from("communautes").select("id,nom").eq("paroisse_id", faithfulRecord.paroisse_id).order("nom"),
+            supabase.from("communautes").select("id,nom,quartier_id").eq("paroisse_id", faithfulRecord.paroisse_id).order("nom"),
+            supabase.from("quartiers").select("id,nom").eq("paroisse_id", faithfulRecord.paroisse_id).order("nom"),
             supabase.from("fideles").select("id,prenom,nom").eq("paroisse_id", faithfulRecord.paroisse_id).order("nom").order("prenom").limit(1000)
           ]);
           if (sequence !== tabSequence) return;
@@ -1132,12 +1138,14 @@ export async function mountFaithfulProfile(
           if (mentionResult.error) throw mentionResult.error;
           if (yearResult.error) throw yearResult.error;
           if (communityResult.error) throw communityResult.error;
+          if (quartierResult.error) throw quartierResult.error;
           if (partnerResult.error) throw partnerResult.error;
 
           const sacramentRecords = sacramentResult.data ?? [];
           const marriageRecords = marriageResult.data ?? [];
           const years = yearResult.data ?? [];
           const communities = communityResult.data ?? [];
+          const quartiers = quartierResult.data ?? [];
           const partners = partnerResult.data ?? [];
           const canWrite = context.roles.some((role) => role === "secretaire" || role === "cure");
           const sacramentLabels: Record<string,string> = { bapteme:"Baptême", eucharistie:"Eucharistie", confirmation:"Confirmation" };
@@ -1151,7 +1159,7 @@ export async function mountFaithfulProfile(
           const fieldLabel = "block text-xs font-medium text-slate-600";
           const fieldClass = "mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm";
           const selected = (actual: string | null | undefined, value: string): string => actual === value ? "selected" : "";
-          const lookupsReady = years.length > 0 && communities.length > 0;
+          const lookupsReady = years.length > 0 && communities.length > 0 && quartiers.length > 0;
 
           const initializePartialDate = (
             form: HTMLFormElement,
@@ -1175,12 +1183,16 @@ export async function mountFaithfulProfile(
               ? '<input type="hidden" name="type" value="' + record.type + '" /><span class="rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold">' + escapeHtml(sacramentLabels[record.type]) + '</span>'
               : '<label class="' + fieldLabel + '">Sacrement<select name="type" required class="' + fieldClass + '">' + availableTypes.map((type) => '<option value="' + type + '">' + escapeHtml(sacramentLabels[type]) + '</option>').join("") + '</select></label>';
             const yearsHtml = years.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(record?.annee_pastorale_id,item.id) + '>' + escapeHtml(item.libelle) + '</option>').join("");
-            const communitiesHtml = communities.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(record?.communaute_historique_id,item.id) + '>' + escapeHtml(item.nom) + '</option>').join("");
+            const recordQuartierId = communities.find((item) => item.id === record?.communaute_historique_id)?.quartier_id ?? "";
+            const quartiersHtml = '<option value="">Choisir un quartier…</option>' + quartiers.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(recordQuartierId,item.id) + '>' + escapeHtml(item.nom) + '</option>').join("");
+            const communitiesHtml = '<option value="">Choisir une communauté…</option>' + communities.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(record?.communaute_historique_id,item.id) + '>' + escapeHtml(item.nom) + '</option>').join("");
             return '<form class="sacrament-editor mt-3 space-y-4 rounded-xl border border-emerald-100 bg-emerald-50/30 p-4" data-record-id="' + escapeHtml(id) + '" data-date-prefix="' + escapeHtml(prefix) + '">' +
               '<div class="flex items-center justify-between gap-3"><h4 class="text-sm font-semibold text-slate-900">' + (record ? "Modifier " + escapeHtml(sacramentLabels[record.type]) : "Nouveau sacrement") + '</h4><span class="text-[10px] text-slate-500">' + (record ? "Modification" : "Création") + '</span></div>' +
-              '<div class="grid gap-3 sm:grid-cols-3">' + typeControl +
-                '<label class="' + fieldLabel + '">Année pastorale<select name="annee_pastorale_id" required class="' + fieldClass + '">' + yearsHtml + '</select></label>' +
-                '<label class="' + fieldLabel + '">Communauté de célébration<select name="communaute_historique_id" required class="' + fieldClass + '">' + communitiesHtml + '</select></label></div>' +
+              '<div class="grid gap-3 sm:grid-cols-2">' +
+                '<label class="' + fieldLabel + '">Quartier *<select name="quartier_id" required class="' + fieldClass + '">' + quartiersHtml + '</select></label>' +
+                '<label class="' + fieldLabel + '">Communauté de célébration *<select name="communaute_historique_id" required class="' + fieldClass + '">' + communitiesHtml + '</select></label></div>' +
+              '<div class="grid gap-3 sm:grid-cols-2">' + typeControl +
+                '<label class="' + fieldLabel + '">Année pastorale<select name="annee_pastorale_id" required class="' + fieldClass + '">' + yearsHtml + '</select></label></div>' +
               '<div><p class="mb-2 text-xs font-semibold text-slate-600">Date du sacrement</p>' + partialDateFields(prefix) + '</div>' +
               '<div class="grid gap-3 sm:grid-cols-2">' +
                 '<label class="' + fieldLabel + '">Lieu<input name="lieu" maxlength="160" value="' + escapeHtml(record?.lieu ?? "") + '" class="' + fieldClass + '" /></label>' +
@@ -1208,7 +1220,9 @@ export async function mountFaithfulProfile(
             ];
             const typeOptions = eventTypes.map(([value,label]) => '<option value="' + value + '" ' + selected(record?.type,value) + '>' + label + '</option>').join("");
             const yearsHtml = years.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(record?.annee_pastorale_id,item.id) + '>' + escapeHtml(item.libelle) + '</option>').join("");
-            const communitiesHtml = communities.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(record?.communaute_historique_id,item.id) + '>' + escapeHtml(item.nom) + '</option>').join("");
+            const recordQuartierId = communities.find((item) => item.id === record?.communaute_historique_id)?.quartier_id ?? "";
+            const quartiersHtml = '<option value="">Choisir un quartier…</option>' + quartiers.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(recordQuartierId,item.id) + '>' + escapeHtml(item.nom) + '</option>').join("");
+            const communitiesHtml = '<option value="">Choisir une communauté…</option>' + communities.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(record?.communaute_historique_id,item.id) + '>' + escapeHtml(item.nom) + '</option>').join("");
             const partnerHtml = '<option value="">Aucun dossier lié · nom libre</option>' + partners
               .filter((item) => item.id !== faithfulRecord.id)
               .map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(record?.conjoint_fidele_id,item.id) + '>' + escapeHtml(item.prenom + " " + item.nom) + '</option>').join("");
@@ -1218,9 +1232,10 @@ export async function mountFaithfulProfile(
             return '<form class="marriage-editor mt-3 space-y-4 rounded-xl border border-amber-100 bg-amber-50/30 p-4" data-record-id="' + escapeHtml(id) + '" data-date-prefix="' + escapeHtml(prefix) + '" data-baptism-prefix="' + escapeHtml(spouseBirthPrefix) + '" data-death-prefix="' + escapeHtml(spouseDeathPrefix) + '">' +
               '<div class="flex items-center justify-between gap-3"><h4 class="text-sm font-semibold text-slate-900">' + (record ? "Modifier l’événement matrimonial" : "Nouvel événement matrimonial") + '</h4><span class="text-[10px] text-slate-500">Mariage · liens de conjoints</span></div>' +
               '<div class="grid gap-3 sm:grid-cols-2">' +
+                '<label class="' + fieldLabel + '">Quartier *<select name="quartier_id" required class="' + fieldClass + '">' + quartiersHtml + '</select></label>' +
+                '<label class="' + fieldLabel + '">Communauté de l’événement *<select name="communaute_historique_id" required class="' + fieldClass + '">' + communitiesHtml + '</select></label>' +
                 '<label class="' + fieldLabel + '">Nature de l’événement<select name="type" required class="' + fieldClass + '">' + typeOptions + '</select></label>' +
                 '<label class="' + fieldLabel + '">Année pastorale<select name="annee_pastorale_id" required class="' + fieldClass + '">' + yearsHtml + '</select></label>' +
-                '<label class="' + fieldLabel + '">Communauté de l’événement<select name="communaute_historique_id" required class="' + fieldClass + '">' + communitiesHtml + '</select></label>' +
                 '<label class="' + fieldLabel + '">Lier au dossier d’un fidèle<select name="conjoint_fidele_id" class="' + fieldClass + '">' + partnerHtml + '</select></label>' +
                 '<label class="' + fieldLabel + ' sm:col-span-2">Nom du conjoint<input name="conjoint_nom" maxlength="160" value="' + escapeHtml(partnerName) + '" class="' + fieldClass + '" placeholder="À utiliser si le conjoint n’est pas inscrit dans la paroisse" /></label>' +
               '</div>' +
@@ -1320,9 +1335,8 @@ export async function mountFaithfulProfile(
               precision:record.precision,jour:record.jour,mois:record.mois,annee:record.annee
             } : null);
             const yearSelect = form.querySelector<HTMLSelectElement>('select[name="annee_pastorale_id"]')!;
-            const communitySelect = form.querySelector<HTMLSelectElement>('select[name="communaute_historique_id"]')!;
+            bindNeighborhoodCommunity(form, "quartier_id", "communaute_historique_id", communities, record?.communaute_historique_id);
             if (!yearSelect.value) yearSelect.value = years.find((item) => item.id === activeYear?.id)?.id ?? years.find((item) => item.active)?.id ?? years[0]?.id ?? "";
-            if (!communitySelect.value) communitySelect.value = communities.find((item) => item.id === faithfulRecord.communaute_id)?.id ?? communities[0]?.id ?? "";
             const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
             form.addEventListener("submit",async(event) => {
               event.preventDefault();
