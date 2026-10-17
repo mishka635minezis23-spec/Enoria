@@ -1220,7 +1220,9 @@ export async function mountFaithfulProfile(
             ];
             const typeOptions = eventTypes.map(([value,label]) => '<option value="' + value + '" ' + selected(record?.type,value) + '>' + label + '</option>').join("");
             const yearsHtml = years.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(record?.annee_pastorale_id,item.id) + '>' + escapeHtml(item.libelle) + '</option>').join("");
-            const communitiesHtml = communities.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(record?.communaute_historique_id,item.id) + '>' + escapeHtml(item.nom) + '</option>').join("");
+            const recordQuartierId = communities.find((item) => item.id === record?.communaute_historique_id)?.quartier_id ?? "";
+            const quartiersHtml = '<option value="">Choisir un quartier…</option>' + quartiers.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(recordQuartierId,item.id) + '>' + escapeHtml(item.nom) + '</option>').join("");
+            const communitiesHtml = '<option value="">Choisir une communauté…</option>' + communities.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(record?.communaute_historique_id,item.id) + '>' + escapeHtml(item.nom) + '</option>').join("");
             const partnerHtml = '<option value="">Aucun dossier lié · nom libre</option>' + partners
               .filter((item) => item.id !== faithfulRecord.id)
               .map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(record?.conjoint_fidele_id,item.id) + '>' + escapeHtml(item.prenom + " " + item.nom) + '</option>').join("");
