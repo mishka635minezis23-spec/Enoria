@@ -4,10 +4,10 @@
   <div class="grid gap-4 sm:grid-cols-2"><article class="page-card p-5"><p class="text-xs text-slate-500">Total en USD</p><p id="dimes-total-usd" class="mt-3 text-2xl font-semibold text-slate-800">—</p></article><article class="page-card p-5"><p class="text-xs text-slate-500">Total en FC</p><p id="dimes-total-fc" class="mt-3 text-2xl font-semibold text-slate-800">—</p></article></div>
   <article class="page-card p-5">
     <h2 class="font-semibold text-slate-800">Enregistrer une contribution</h2>
-    <p class="mt-1 text-xs text-slate-500">Une seule ligne de dîme par fidèle et par année pastorale. Une nouvelle saisie met à jour cette ligne.</p>
+    <p class="mt-1 text-xs text-slate-500">Une seule ligne de dîme par fidèle et par année pastorale. Tu peux la modifier ou la supprimer ensuite.</p>
     <form id="dime-form" class="mt-4 space-y-4">
       <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <label class="block text-xs font-medium text-slate-600">Rechercher le fidèle<input id="dime-search" type="search" maxlength="80" placeholder="Nom ou prénom…" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" /></label>
+        <label class="block text-xs font-medium text-slate-600">Rechercher le fidèle<input id="dime-search" type="search" maxlength="80" autocomplete="off" placeholder="Tape quelques lettres du nom ou du prénom…" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" /></label>
         <button id="dime-search-button" type="button" class="self-end rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700">Rechercher</button>
       </div>
       <div id="dime-search-results" class="hidden divide-y divide-slate-100 rounded-lg border border-slate-100 px-3"></div>
@@ -18,10 +18,10 @@
         <label class="block text-xs font-medium text-slate-600">Devise<select id="dime-currency" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="USD">USD</option><option value="FC">FC</option></select></label>
       </div>
       <label class="block text-xs font-medium text-slate-600">Observation (facultatif)<input id="dime-observation" maxlength="300" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" /></label>
-      <button id="dime-submit" type="submit" class="rounded-lg bg-[var(--enoria-green)] px-4 py-2.5 text-sm font-semibold text-white">Enregistrer la dîme</button>
+      <div class="flex flex-wrap gap-2"><button id="dime-submit" type="submit" class="rounded-lg bg-[var(--enoria-green)] px-4 py-2.5 text-sm font-semibold text-white">Enregistrer la dîme</button><button id="dime-cancel-edit" type="button" class="hidden rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600">Annuler la modification</button></div>
     </form>
   </article>
   <article class="page-card p-5"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="font-semibold text-slate-800">Contributions de l'année</h2><p id="dimes-count" class="mt-1 text-xs text-slate-500">Chargement…</p></div></div>
-    <div class="mt-4 overflow-x-auto"><table class="w-full min-w-[620px] text-left text-sm"><thead class="border-y border-slate-100 bg-slate-50 text-xs text-slate-500"><tr><th class="px-3 py-3 font-medium">Fidèle</th><th class="px-3 py-3 font-medium">Montant</th><th class="px-3 py-3 font-medium">Devise</th><th class="px-3 py-3 font-medium">Observation</th><th class="px-3 py-3 font-medium">Enregistrée le</th></tr></thead><tbody id="dimes-rows"><tr><td colspan="5" class="px-3 py-10 text-center text-sm text-slate-400">Chargement…</td></tr></tbody></table></div>
+    <div class="mt-4 overflow-x-auto"><table class="w-full min-w-[760px] text-left text-sm"><thead class="border-y border-slate-100 bg-slate-50 text-xs text-slate-500"><tr><th class="px-3 py-3 font-medium">Fidèle</th><th class="px-3 py-3 font-medium">Montant</th><th class="px-3 py-3 font-medium">Devise</th><th class="px-3 py-3 font-medium">Observation</th><th class="px-3 py-3 font-medium">Enregistrée le</th><th class="px-3 py-3 font-medium">Actions</th></tr></thead><tbody id="dimes-rows"><tr><td colspan="6" class="px-3 py-10 text-center text-sm text-slate-400">Chargement…</td></tr></tbody></table></div>
   </article>
 </section>
