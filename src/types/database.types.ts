@@ -408,6 +408,7 @@ export type Database = {
           conjoint_bapteme_mois: number | null
           conjoint_bapteme_precision: Database["public"]["Enums"]["precision_date"]
           conjoint_lieu_bapteme: string | null
+          conjoint_fidele_id: string | null
           conjoint_nom: string | null
           created_at: string
           created_by: string | null
@@ -438,6 +439,7 @@ export type Database = {
           conjoint_bapteme_mois?: number | null
           conjoint_bapteme_precision?: Database["public"]["Enums"]["precision_date"]
           conjoint_lieu_bapteme?: string | null
+          conjoint_fidele_id?: string | null
           conjoint_nom?: string | null
           created_at?: string
           created_by?: string | null
@@ -468,6 +470,7 @@ export type Database = {
           conjoint_bapteme_mois?: number | null
           conjoint_bapteme_precision?: Database["public"]["Enums"]["precision_date"]
           conjoint_lieu_bapteme?: string | null
+          conjoint_fidele_id?: string | null
           conjoint_nom?: string | null
           created_at?: string
           created_by?: string | null
@@ -510,6 +513,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "utilisateurs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evenements_matrimoniaux_conjoint_paroisse_fkey"
+            columns: ["conjoint_fidele_id", "paroisse_id"]
+            isOneToOne: false
+            referencedRelation: "fideles"
+            referencedColumns: ["id", "paroisse_id"]
           },
           {
             foreignKeyName: "evenements_matrimoniaux_fidele_id_fkey"
