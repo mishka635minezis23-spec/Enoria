@@ -618,9 +618,9 @@ export async function mountSacramentsPage(
       reportFeedback.className = "rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800";
       container.querySelector<HTMLButtonElement>("#sacrament-report-excel")?.addEventListener("click", () => exportWorkbook(true));
       container.querySelector<HTMLButtonElement>("#sacrament-report-print")?.addEventListener("click", () => {
-        document.documentElement.dataset.printReport = "true";
+        document.body.dataset.printReport = "true";
         window.print();
-        window.setTimeout(() => delete document.documentElement.dataset.printReport, 600);
+        window.setTimeout(() => delete document.body.dataset.printReport, 600);
       });
     } catch (error) {
       reportFeedback.textContent = error instanceof Error ? error.message : "Impossible de préparer les données du rapport.";
