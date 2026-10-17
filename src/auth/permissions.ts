@@ -9,7 +9,7 @@ const MODULE_ACCESS: Record<RouteKey, EnoriaRole[]> = {
   dimes: ["secretaire", "cure"],
   rapports: ["secretaire", "cure"],
   statistiques: ["responsable", "secretaire", "cure"],
-  parametres: ["cure"]
+  parametres: ["secretaire", "cure"]
 };
 
 export function canAccessModule(roles: EnoriaRole[], route: RouteKey): boolean {
@@ -44,4 +44,9 @@ export function canApproveDuplicate(roles: EnoriaRole[]): boolean {
 
 export function canManageSettings(roles: EnoriaRole[]): boolean {
   return roles.includes("cure");
+}
+
+/** Les couleurs de marque sont communes à la paroisse et modifiables par le secrétaire ou le curé. */
+export function canManageParishTheme(roles: EnoriaRole[]): boolean {
+  return roles.some((role) => role === "secretaire" || role === "cure");
 }

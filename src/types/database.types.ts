@@ -807,18 +807,21 @@ export type Database = {
           created_at: string
           id: string
           nom: string
+          theme: Json
         }
         Insert: {
           code?: string | null
           created_at?: string
           id?: string
           nom: string
+          theme?: Json
         }
         Update: {
           code?: string | null
           created_at?: string
           id?: string
           nom?: string
+          theme?: Json
         }
         Relationships: []
       }

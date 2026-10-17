@@ -36,17 +36,6 @@ export function renderSetupScreen(
             </label>
             <p class="mt-1 text-[11px] text-slate-400">Si une clé est déjà enregistrée, laisse ce champ vide pour la conserver.</p>
           </div>
-          <div class="border-t border-slate-100 pt-5">
-            <h2 class="font-semibold text-slate-800">Couleurs de l'application</h2>
-            <div class="mt-3 grid gap-4 sm:grid-cols-2">
-              <label class="block text-sm font-medium text-slate-700">Couleur principale
-                <input name="primary" id="setup-primary" type="color" class="mt-1.5 h-11 w-full rounded-lg border border-slate-300 bg-white p-1" />
-              </label>
-              <label class="block text-sm font-medium text-slate-700">Couleur sombre
-                <input name="primaryDark" id="setup-dark" type="color" class="mt-1.5 h-11 w-full rounded-lg border border-slate-300 bg-white p-1" />
-              </label>
-            </div>
-          </div>
           <p id="setup-error" class="hidden rounded-lg bg-rose-50 p-3 text-sm text-rose-700" role="alert"></p>
           <button id="setup-submit" type="submit" class="w-full rounded-lg bg-[var(--enoria-green)] px-4 py-3 text-sm font-semibold text-white hover:bg-[#125443]">Enregistrer la configuration</button>
         </form>
@@ -58,13 +47,9 @@ export function renderSetupScreen(
   const diocese = root.querySelector<HTMLInputElement>("#setup-diocese")!;
   const url = root.querySelector<HTMLInputElement>("#setup-url")!;
   const key = root.querySelector<HTMLInputElement>("#setup-key")!;
-  const primary = root.querySelector<HTMLInputElement>("#setup-primary")!;
-  const dark = root.querySelector<HTMLInputElement>("#setup-dark")!;
   parish.value = current.parishName;
   diocese.value = current.dioceseName;
   url.value = current.supabase.url ?? "";
-  primary.value = current.theme.primary;
-  dark.value = current.theme.primaryDark;
 
   root.querySelector<HTMLFormElement>("#setup-form")!.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -80,7 +65,6 @@ export function renderSetupScreen(
       const next: Partial<AppConfig> = {
         parishName: parish.value,
         dioceseName: diocese.value,
-        theme: { ...current.theme, primary: primary.value, primaryDark: dark.value },
         supabase: {
           url: url.value,
           publishableKey: key.value.trim() || current.supabase.publishableKey

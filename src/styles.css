@@ -1,35 +1,82 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #17211f;
-  background: #f6f8f7;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --enoria-green: #176653;
-  --enoria-deep: #123b32;
-  --enoria-surface: #f8fafc;
+  --enoria-primary: #061AAC;
+  --enoria-secondary: #33A3F8;
+  --enoria-primary-soft: #EAF5FF;
+  --enoria-background: #F7F9FC;
+  --enoria-surface: #FFFFFF;
+  --enoria-text: #282C30;
+  --enoria-text-muted: #667085;
+  --enoria-border: #E5EAF0;
+  --enoria-success: #16865B;
+  --enoria-warning: #B7791F;
+  --enoria-danger: #C0392B;
+  --enoria-radius-card: 16px;
+  --enoria-radius-control: 10px;
+  /* Aliases conservés pour ne pas casser les pages existantes. */
+  --enoria-green: var(--enoria-primary);
+  --enoria-deep: #10235B;
+  --enoria-surface-legacy: var(--enoria-background);
+  color: var(--enoria-text);
+  background: var(--enoria-background);
 }
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; background: var(--enoria-surface); }
+html { background: var(--enoria-background); }
+body { margin: 0; min-width: 320px; background: var(--enoria-background); color: var(--enoria-text); }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { font: inherit; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid #A6D9FF;
+  outline-offset: 2px;
+}
 .sidebar-link {
   display: flex; align-items: center; gap: .8rem; width: 100%;
-  border-radius: .75rem; padding: .68rem .8rem; color: #cbd8d4;
+  border-radius: .75rem; padding: .68rem .8rem; color: #DCE6FF;
   font-size: .875rem; font-weight: 500; text-align: left;
   transition: background .15s ease, color .15s ease;
 }
-.sidebar-link:hover { background: rgba(255,255,255,.08); color: white; }
-.sidebar-link[aria-current="page"] { color: white; background: rgba(111,190,159,.18); box-shadow: inset 3px 0 #7bc6a8; }
+.sidebar-link:hover { background: rgba(255,255,255,.09); color: white; }
+.sidebar-link[aria-current="page"] {
+  color: white;
+  background: var(--enoria-secondary);
+  box-shadow: inset 3px 0 #FFFFFF;
+}
 .sidebar-link .nav-icon { width: 1.2rem; text-align: center; font-size: 1rem; opacity: .9; }
 .mobile-nav { display: none; }
-.page-card { border: 1px solid #e7ece9; border-radius: 1rem; background: white; }
+.page-card {
+  border: 1px solid var(--enoria-border);
+  border-radius: var(--enoria-radius-card);
+  background: var(--enoria-surface);
+  box-shadow: 0 1px 2px rgba(16,35,91,.035);
+}
+input, select, textarea {
+  border-color: var(--enoria-border);
+  border-radius: var(--enoria-radius-control);
+}
+::selection { background: var(--enoria-primary-soft); color: var(--enoria-primary); }
+
+/* Transition douce des anciennes classes emerald vers la palette bleue Enoria. */
+:is([class~="text-emerald-700"],[class~="text-emerald-800"],[class~="text-emerald-900"],[class~="text-emerald-600"]) { color: var(--enoria-primary) !important; }
+:is([class~="text-emerald-500"],[class~="text-emerald-400"]) { color: var(--enoria-secondary) !important; }
+:is([class~="bg-emerald-50"],[class~="bg-emerald-100"],[class~="bg-emerald-200"]) { background-color: var(--enoria-primary-soft) !important; }
+:is([class~="bg-emerald-600"],[class~="bg-emerald-700"],[class~="bg-emerald-800"]) { background-color: var(--enoria-primary) !important; }
+:is([class~="hover:bg-emerald-700"]:hover,[class~="hover:bg-emerald-800"]:hover) { background-color: #05158E !important; }
+:is([class~="border-emerald-100"],[class~="border-emerald-200"],[class~="border-emerald-300"]) { border-color: #D8E5FF !important; }
+:is([class~="focus:border-emerald-700"]:focus) { border-color: var(--enoria-primary) !important; }
+:is([class~="focus:ring-emerald-100"]:focus) { --tw-ring-color: var(--enoria-primary-soft) !important; }
 @media (max-width: 767px) {
   .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 40; width: 17rem; transform: translateX(-100%); transition: transform .2s ease; }
   .sidebar[data-open="true"] { transform: translateX(0); }
   .mobile-nav { display: flex; }
-  .sidebar-backdrop { display: none; position: fixed; inset: 0; z-index: 30; background: rgba(10,25,21,.48); }
+  .sidebar-backdrop { display: none; position: fixed; inset: 0; z-index: 30; background: rgba(10,25,55,.48); }
   .sidebar-backdrop[data-open="true"] { display: block; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }

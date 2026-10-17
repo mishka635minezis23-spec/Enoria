@@ -12,6 +12,7 @@ import { mountStatistics } from "./features/statistiques/statistiques-ui";
 import { mountReports } from "./features/rapports/rapports-ui";
 import { renderLoginScreen, renderSetupScreen } from "./ui/auth-screens";
 import { mountSettingsPage } from "./ui/settings";
+import { DEFAULT_PARISH_THEME, loadParishTheme, type ParishTheme } from "./config/parish-theme";
 import { registerSW } from "virtual:pwa-register";
 
 const root = document.querySelector<HTMLDivElement>("#app");
@@ -25,14 +26,21 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => replacements[character] ?? character);
 }
 
-function applyTheme(): void {
-  const config = getAppConfig();
-  document.documentElement.style.setProperty("--enoria-green", config.theme.primary);
-  document.documentElement.style.setProperty("--enoria-deep", config.theme.primaryDark);
-  document.documentElement.style.setProperty("--enoria-surface", config.theme.surface);
-  document.body.style.backgroundColor = config.theme.surface;
+function applyTheme(theme: ParishTheme = DEFAULT_PARISH_THEME): void {
+  const root = document.documentElement;
+  root.style.setProperty("--enoria-primary", theme.primary);
+  root.style.setProperty("--enoria-secondary", theme.secondary);
+  root.style.setProperty("--enoria-primary-soft", theme.primarySoft);
+  root.style.setProperty("--enoria-background", theme.background);
+  root.style.setProperty("--enoria-surface", theme.surface);
+  root.style.setProperty("--enoria-text", theme.text);
+  root.style.setProperty("--enoria-text-muted", theme.textMuted);
+  root.style.setProperty("--enoria-border", theme.border);
+  root.style.setProperty("--enoria-green", theme.primary);
+  root.style.setProperty("--enoria-deep", "#10235B");
+  document.body.style.backgroundColor = theme.background;
   document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
-    ?.setAttribute("content", config.theme.primaryDark);
+    ?.setAttribute("content", theme.primary);
 }
 
 let removeAppListeners: (() => void) | null = null;
@@ -45,7 +53,7 @@ async function bootstrap(): Promise<void> {
   }
   activePageCleanup?.();
   activePageCleanup = null;
-  applyTheme();
+  applyTheme(DEFAULT_PARISH_THEME);
   const config = getAppConfig();
 
   if (!hasSupabaseConfig(config)) {
@@ -59,13 +67,21 @@ async function bootstrap(): Promise<void> {
       renderLoginScreen(appRoot, config, () => void bootstrap());
       return;
     }
+    const parishId = context.assignments[0].paroisse_id;
     let activePastoralYear: ActivePastoralYear | null = null;
+    let parishTheme = DEFAULT_PARISH_THEME;
     try {
-      activePastoralYear = await loadActivePastoralYear(context.assignments[0].paroisse_id);
+      activePastoralYear = await loadActivePastoralYear(parishId);
     } catch (error) {
       console.warn("Année pastorale active indisponible :", error);
     }
-    renderApplication(context, activePastoralYear);
+    try {
+      parishTheme = await loadParishTheme(parishId);
+    } catch (error) {
+      console.warn("Palette paroissiale indisponible ; palette par défaut appliquée :", error);
+    }
+    applyTheme(parishTheme);
+    renderApplication(context, activePastoralYear, parishTheme);
   } catch (error) {
     const message = error instanceof Error
       ? error.message
@@ -75,7 +91,7 @@ async function bootstrap(): Promise<void> {
   }
 }
 
-function renderApplication(context: UserContext, activePastoralYear: ActivePastoralYear | null): void {
+function renderApplication(context: UserContext, activePastoralYear: ActivePastoralYear | null, parishTheme: ParishTheme): void {
   if (removeAppListeners) removeAppListeners();
 
   const config = getAppConfig();
@@ -182,7 +198,7 @@ function renderApplication(context: UserContext, activePastoralYear: ActivePasto
       content.innerHTML = markup;
       document.title = faithfulId ? "Fiche fidèle — Enoria" : `${ROUTES[route].label} — Enoria`;
       if (route === "parametres") {
-        mountSettingsPage(content, context, () => window.location.reload());
+        mountSettingsPage(content, context, parishTheme, () => window.location.reload());
       } else if (route === "organisation") {
         void mountOrganisation(content, context);
       } else if (route === "dimes") {
