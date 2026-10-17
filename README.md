@@ -4,7 +4,7 @@ Registre numérique des sacrements de la paroisse **Notre Dame d'Afrique**. Enor
 
 ## État du projet
 
-Le socle PWA, l'authentification, la navigation, les principales lectures métier et plusieurs écritures sécurisées sont en place. Les fonctionnalités sont développées progressivement à partir du schéma Supabase existant ; aucune migration ni modification de base n'a été exécutée pendant cette phase.
+Le socle PWA, l'authentification, la navigation, les principales lectures métier et plusieurs écritures sécurisées sont en place. Les évolutions du schéma sont appliquées par migrations versionnées dans `supabase/migrations/` et vérifiées sur le projet Supabase Enoria.
 
 ## Stack
 
@@ -54,8 +54,8 @@ Les routes utilisent des fragments (`#/dashboard`, `#/fideles`, etc.). Le menu r
 ## Les huit modules
 
 1. **Tableau de bord** : indicateurs calculés depuis les vues statistiques sécurisées.
-2. **Organisation paroissiale** : quartiers et communautés en lecture seule tant que les politiques RLS d'écriture ne sont pas définies.
-3. **Gestion des fidèles** : recherche, filtres, liste et fiche individuelle en cinq onglets. L'inscription d'un nouveau fidèle reste bloquée jusqu'à la fonction transactionnelle fidèle + baptême.
+2. **Organisation paroissiale** : consultation et création des quartiers et communautés par le curé et la secrétaire ; la modification, la désactivation et la suppression depuis l'interface restent à développer.
+3. **Gestion des fidèles** : recherche et filtres ; inscription progressive en trois étapes ; fiche-livret en trois colonnes ; statut vivant/décédé et couleur de carte modifiables ; onglets Sacrements, Dîmes, Famille, Historique et Documents. Le fidèle et son baptême sont enregistrés dans une même transaction.
 4. **Gestion des sacrements** : recherche, consultation du dossier, ajout d'Eucharistie et de Confirmation. Le livret 3D est généré à partir des données structurées ; une vue 2D est disponible si WebGL ne fonctionne pas.
 5. **Gestion des dîmes** : saisie et mise à jour d'une contribution par fidèle et par année pastorale.
 6. **Rapports** : exports CSV des fidèles, sacrements, événements matrimoniaux et dîmes. Les duplicatas PDF passent par les fonctions RPC de demande, validation du curé et émission.
@@ -70,7 +70,7 @@ Les comptes ne peuvent pas s'inscrire depuis l'application. Ils doivent être cr
 
 Seule l'URL et une clé publique sont utilisées dans le navigateur. **La clé service_role ou une clé sb_secret ne doit jamais être exposée côté client ni commitée dans ce dépôt.** Le menu est filtré par rôle, mais la sécurité réelle reste assurée par les politiques RLS de la base.
 
-Les écritures déjà activées sont limitées aux voies autorisées par le schéma : dîmes via upsert protégé par RLS, Eucharistie/Confirmation via contraintes de registre, et duplicatas via RPC sécurisées. Les écritures non couvertes par des contraintes ou fonctions transactionnelles restent désactivées. Voir [docs/database-compatibility.md](docs/database-compatibility.md).
+Les écritures activées utilisent les voies contrôlées par la base : inscription fidèle + baptême, dîmes via upsert protégé par RLS, Eucharistie/Confirmation via contraintes de registre et duplicatas via RPC sécurisées. La fonction `enregistrer_fidele_baptise(jsonb)` est `SECURITY INVOKER`, réservée aux comptes authentifiés et vérifie le rôle secrétaire/curé. Les couleurs autorisées sont `rose`, `bleu`, `lavande`, `sauge` et `or` ; `rose` est la valeur par défaut. Voir [docs/database-compatibility.md](docs/database-compatibility.md).
 
 Le type `Database` dans `src/types/database.types.ts` a été généré depuis le schéma existant. Il doit être régénéré après toute évolution validée de la base. Le [plan de recette](docs/test-plan.md) décrit les vérifications manuelles à effectuer par rôle et par module.
 
