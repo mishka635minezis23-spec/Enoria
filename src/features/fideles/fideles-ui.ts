@@ -53,6 +53,7 @@ export function mountFaithfulList(container: HTMLElement, context: UserContext, 
   const rowsNode = container.querySelector<HTMLElement>("#faithful-rows");
   const feedback = container.querySelector<HTMLElement>("#faithful-feedback");
   const countNode = container.querySelector<HTMLElement>("#faithful-count");
+  const suggestionsNode = container.querySelector<HTMLElement>("#faithful-search-suggestions");
   const pageNode = container.querySelector<HTMLElement>("#faithful-page");
   const previous = container.querySelector<HTMLButtonElement>("#faithful-prev");
   const next = container.querySelector<HTMLButtonElement>("#faithful-next");
@@ -146,7 +147,11 @@ export function mountFaithfulList(container: HTMLElement, context: UserContext, 
         .order("prenom", { ascending: true })
         .range(from, from + PAGE_SIZE - 1);
 
-      if (term) query = query.or(`prenom.ilike.%${term}%,nom.ilike.%${term}%`);
+      if (term) {
+        const tokens = term.split(/\s+/).filter(Boolean);
+        const expression = tokens.map((part) => `prenom.ilike.%${part}%,nom.ilike.%${part}%`).join(",");
+        query = query.or(expression);
+      }
       if (current.get("sexe")) query = query.eq("sexe", current.get("sexe")!);
       const selectedStatus = current.get("statut");
       if (selectedStatus === "vivant" || selectedStatus === "decede") query = query.eq("statut", selectedStatus);
@@ -234,8 +239,41 @@ export function mountFaithfulList(container: HTMLElement, context: UserContext, 
     writeListParams(current);
     void loadRows();
   });
+  let suggestionSequence = 0;
+  let suggestionTimer: number | undefined;
+  async function loadFaithfulSuggestions(): Promise<void> {
+    if (!suggestionsNode) return;
+    const term = safeSearchTerm(searchEl.value);
+    const sequence = ++suggestionSequence;
+    if (term.length < 2) { suggestionsNode.classList.add("hidden"); suggestionsNode.innerHTML = ""; return; }
+    const tokens = term.split(/\s+/).filter(Boolean);
+    const expression = tokens.map((part) => `prenom.ilike.%${part}%,nom.ilike.%${part}%`).join(",");
+    const result = await getSupabaseClient().from("fideles").select("id,prenom,nom").or(expression).order("nom").limit(8);
+    if (sequence !== suggestionSequence) return;
+    if (result.error) { suggestionsNode.classList.add("hidden"); return; }
+    suggestionsNode.innerHTML = (result.data ?? []).map((item) =>
+      `<button type="button" data-suggest-fidele="${escapeHtml(item.id)}" data-suggest-name="${escapeHtml(item.prenom + " " + item.nom)}" class="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-emerald-50">${escapeHtml(item.prenom)} ${escapeHtml(item.nom)}</button>`
+    ).join("") || '<p class="px-3 py-2 text-xs text-slate-400">Aucune proposition.</p>';
+    suggestionsNode.classList.remove("hidden");
+  }
+  searchEl.addEventListener("input", () => {
+    if (suggestionTimer !== undefined) window.clearTimeout(suggestionTimer);
+    suggestionTimer = window.setTimeout(() => void loadFaithfulSuggestions(), 180);
+  });
+  searchEl.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") suggestionsNode?.classList.add("hidden");
+  });
   container.addEventListener("click", (event) => {
-    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-open-fidele]");
+    const target = event.target as HTMLElement;
+    const suggestion = target.closest<HTMLButtonElement>("[data-suggest-fidele]");
+    if (suggestion) {
+      searchEl.value = suggestion.dataset.suggestName ?? "";
+      suggestionsNode?.classList.add("hidden");
+      persistFilters(true);
+      void loadRows();
+      return;
+    }
+    const button = target.closest<HTMLButtonElement>("[data-open-fidele]");
     if (button?.dataset.openFidele) navigateToFaithful(button.dataset.openFidele);
   });
 
@@ -323,14 +361,17 @@ function mountFaithfulCreateWizard(
     const originalLabel = addButton.textContent;
     addButton.textContent = "Préparation…";
     try {
-      const [yearsResult, communitiesResult] = await Promise.all([
+      const [yearsResult, communitiesResult, quartiersResult] = await Promise.all([
         db.from("annees_pastorales").select("id,libelle,date_debut,active").eq("paroisse_id", parishId).order("date_debut", { ascending: false }),
-        db.from("communautes").select("id,nom,active").eq("paroisse_id", parishId).eq("active", true).order("nom")
+        db.from("communautes").select("id,nom,active,quartier_id").eq("paroisse_id", parishId).eq("active", true).order("nom"),
+        db.from("quartiers").select("id,nom").eq("paroisse_id", parishId).order("nom")
       ]);
       if (yearsResult.error) throw yearsResult.error;
       if (communitiesResult.error) throw communitiesResult.error;
+      if (quartiersResult.error) throw quartiersResult.error;
       const years = yearsResult.data ?? [];
       const communities = communitiesResult.data ?? [];
+      const quartiers = quartiersResult.data ?? [];
       if (!years.length) throw new Error("Crée d’abord une année pastorale dans Paramètres avant d’enregistrer un fidèle.");
       if (!communities.length) throw new Error("Aucune communauté active n’est disponible pour cette paroisse.");
       const yearOptions = years.map((item) => '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.libelle) + '</option>').join("");
@@ -343,7 +384,8 @@ function mountFaithfulCreateWizard(
         '<section data-wizard-step="1" class="space-y-4"><div class="rounded-xl border border-slate-100 p-4"><h3 class="font-semibold text-slate-800">Identité et appartenance</h3><div class="mt-3 grid gap-3 sm:grid-cols-2">' +
         '<label class="' + labelClass + '">Prénom *<input name="prenom" required maxlength="100" class="' + inputClass + '" /></label><label class="' + labelClass + '">Nom *<input name="nom" required maxlength="100" class="' + inputClass + '" /></label>' +
         '<label class="' + labelClass + '">Sexe *<select name="sexe" required class="' + selectClass + '"><option value="">Choisir…</option><option value="masculin">Masculin</option><option value="feminin">Féminin</option></select></label>' +
-        '<label class="' + labelClass + '">Communauté actuelle *<select name="communaute_id" required class="' + selectClass + '"><option value="">Choisir…</option>' + communityOptions + '</select></label>' +
+        '<label class="' + labelClass + '">Quartier *<select name="quartier_id" required class="' + selectClass + '"><option value="">Choisir un quartier…</option>' + quartiers.map((item) => '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.nom) + '</option>').join("") + '</select></label>' +
+        '<label class="' + labelClass + '">Communauté actuelle *<select name="communaute_id" required class="' + selectClass + '"><option value="">Choisir une communauté…</option>' + communityOptions + '</select></label>' +
         '<label class="' + labelClass + '">Membre depuis<input name="communaute_depuis" type="date" class="' + inputClass + '" /></label><label class="' + labelClass + '">Lieu de naissance<input name="lieu_naissance" maxlength="160" class="' + inputClass + '" /></label></div>' +
         '<div class="mt-4"><p class="mb-2 text-xs font-semibold text-slate-600">Date de naissance</p>' + partialDateFields("new-birth") + '</div></div>' +
         '<div class="rounded-xl border border-slate-100 p-4"><h3 class="font-semibold text-slate-800">Parents</h3><div class="mt-3 grid gap-3 sm:grid-cols-2"><label class="' + labelClass + '">Nom du père<input name="nom_pere" maxlength="160" class="' + inputClass + '" /></label><label class="' + labelClass + '">Nom de la mère<input name="nom_mere" maxlength="160" class="' + inputClass + '" /></label></div></div>' +
@@ -567,7 +609,26 @@ function mountFaithfulCreateWizard(
       });
 
       const currentCommunity = form.querySelector<HTMLSelectElement>('select[name="communaute_id"]')!;
-      currentCommunity.value = communities[0]?.id ?? "";
+      const currentQuartier = form.querySelector<HTMLSelectElement>('select[name="quartier_id"]')!;
+      const syncWizardCommunities = (): void => {
+        const filtered = communities.filter((item) => item.quartier_id === currentQuartier.value);
+        currentCommunity.innerHTML = '<option value="">Choisir une communauté…</option>' +
+          filtered.map((item) => '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.nom) + '</option>').join("");
+        currentCommunity.value = filtered[0]?.id ?? "";
+        for (const prefix of ["new-bapteme","new-eucharistie","new-confirmation","new-marriage"]) {
+          const select = form.querySelector<HTMLSelectElement>('select[name="' + prefix + '-community"]');
+          if (select) select.value = currentCommunity.value;
+        }
+      };
+      currentQuartier.value = communities[0]?.quartier_id ?? "";
+      syncWizardCommunities();
+      currentQuartier.addEventListener("change", syncWizardCommunities);
+      currentCommunity.addEventListener("change", () => {
+        for (const prefix of ["new-bapteme","new-eucharistie","new-confirmation","new-marriage"]) {
+          const select = form.querySelector<HTMLSelectElement>('select[name="' + prefix + '-community"]');
+          if (select) select.value = currentCommunity.value;
+        }
+      });
       for (const prefix of ["new-bapteme","new-eucharistie","new-confirmation","new-marriage"]) {
         const communitySelect = form.querySelector<HTMLSelectElement>('select[name="' + prefix + '-community"]');
         if (communitySelect) communitySelect.value = currentCommunity.value;
@@ -1396,25 +1457,107 @@ export async function mountFaithfulProfile(
           if(sequence!==tabSequence)return;
           if(dimeResult.error)throw dimeResult.error;
           if(yearResult.error)throw yearResult.error;
-          const years=new Map((yearResult.data??[]).map((item)=>[item.id,item.libelle]));
+          const years=yearResult.data??[];
+          const yearMap=new Map(years.map((item)=>[item.id,item.libelle]));
           const entries=dimeResult.data??[];
           const totals=new Map<string,number>();
           for(const item of entries)totals.set(item.devise,(totals.get(item.devise)??0)+item.montant);
-          const rows=entries.map((item)=>'<tr class="border-b border-slate-100 last:border-0"><td class="px-3 py-3 font-medium text-slate-800">'+escapeHtml(years.get(item.annee_pastorale_id)??"Année inconnue")+'</td><td class="px-3 py-3 text-right tabular-nums">'+escapeHtml(item.montant.toLocaleString("fr-CD",{maximumFractionDigits:2}))+'</td><td class="px-3 py-3">'+escapeHtml(item.devise)+'</td><td class="px-3 py-3 text-slate-500">'+escapeHtml(item.observation??"—")+'</td></tr>').join("");
-          contentEl.innerHTML='<div class="space-y-4"><section class="page-card p-5"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="font-semibold text-slate-800">Dîmes du fidèle</h2><p class="mt-1 text-xs text-slate-500">Registre distinct du livret sacramentel · une contribution par année pastorale</p></div><span class="rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700">'+entries.length+' contribution(s)</span></div><div class="mt-4 grid gap-3 sm:grid-cols-2"><div class="rounded-xl border border-slate-100 bg-slate-50 p-4"><p class="text-xs text-slate-500">Total en USD</p><p class="mt-1 text-xl font-semibold tabular-nums text-slate-900">'+(totals.get("USD")??0).toLocaleString("fr-CD",{maximumFractionDigits:2})+'</p></div><div class="rounded-xl border border-slate-100 bg-slate-50 p-4"><p class="text-xs text-slate-500">Total en FC</p><p class="mt-1 text-xl font-semibold tabular-nums text-slate-900">'+(totals.get("FC")??0).toLocaleString("fr-CD",{maximumFractionDigits:2})+'</p></div></div><div class="mt-5 overflow-x-auto"><table class="w-full min-w-[520px] text-left text-sm"><thead class="border-y border-slate-100 bg-slate-50 text-xs text-slate-500"><tr><th class="px-3 py-3 font-medium">Année pastorale</th><th class="px-3 py-3 text-right font-medium">Montant</th><th class="px-3 py-3 font-medium">Devise</th><th class="px-3 py-3 font-medium">Observation</th></tr></thead><tbody>'+(rows||'<tr><td colspan="4" class="px-3 py-12 text-center text-sm text-slate-400">Aucune dîme enregistrée pour ce fidèle.</td></tr>')+'</tbody></table></div></section></div>';
+          const rows=entries.map((item)=>'<tr class="border-b border-slate-100 last:border-0"><td class="px-3 py-3 font-medium text-slate-800">'+escapeHtml(yearMap.get(item.annee_pastorale_id)??"Année inconnue")+'</td><td class="px-3 py-3 text-right tabular-nums">'+escapeHtml(item.montant.toLocaleString("fr-CD",{maximumFractionDigits:2}))+'</td><td class="px-3 py-3">'+escapeHtml(item.devise)+'</td><td class="px-3 py-3 text-slate-500">'+escapeHtml(item.observation??"—")+'</td><td class="px-3 py-3"><div class="flex gap-2"><button type="button" data-profile-edit-dime="'+escapeHtml(item.id)+'" class="text-xs font-semibold text-emerald-700">Modifier</button><button type="button" data-profile-delete-dime="'+escapeHtml(item.id)+'" class="text-xs font-semibold text-rose-600">Supprimer</button></div></td></tr>').join("");
+          const yearOptions=years.map((item)=>'<option value="'+escapeHtml(item.id)+'">'+escapeHtml(item.libelle)+'</option>').join("");
+          contentEl.innerHTML='<div class="space-y-4"><section class="page-card p-5"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="font-semibold text-slate-800">Dîmes du fidèle</h2><p class="mt-1 text-xs text-slate-500">Une contribution par année pastorale · modification et suppression disponibles</p></div><span class="rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700">'+entries.length+' contribution(s)</span></div><div class="mt-4 grid gap-3 sm:grid-cols-2"><div class="rounded-xl border border-slate-100 bg-slate-50 p-4"><p class="text-xs text-slate-500">Total en USD</p><p class="mt-1 text-xl font-semibold tabular-nums text-slate-900">'+(totals.get("USD")??0).toLocaleString("fr-CD",{maximumFractionDigits:2})+'</p></div><div class="rounded-xl border border-slate-100 bg-slate-50 p-4"><p class="text-xs text-slate-500">Total en FC</p><p class="mt-1 text-xl font-semibold tabular-nums text-slate-900">'+(totals.get("FC")??0).toLocaleString("fr-CD",{maximumFractionDigits:2})+'</p></div></div><div class="mt-5 overflow-x-auto"><table class="w-full min-w-[650px] text-left text-sm"><thead class="border-y border-slate-100 bg-slate-50 text-xs text-slate-500"><tr><th class="px-3 py-3 font-medium">Année pastorale</th><th class="px-3 py-3 text-right font-medium">Montant</th><th class="px-3 py-3 font-medium">Devise</th><th class="px-3 py-3 font-medium">Observation</th><th class="px-3 py-3 font-medium">Actions</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" class="px-3 py-12 text-center text-sm text-slate-400">Aucune dîme enregistrée pour ce fidèle.</td></tr>')+'</tbody></table></div></section><section class="page-card p-5"><h3 class="font-semibold text-slate-800">Ajouter ou modifier une dîme</h3><form id="profile-dime-form" class="mt-4 grid gap-3 sm:grid-cols-2"><input id="profile-dime-id" type="hidden"><label class="text-xs font-medium text-slate-600">Année pastorale<select id="profile-dime-year" required class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm">'+yearOptions+'</select></label><label class="text-xs font-medium text-slate-600">Montant<input id="profile-dime-amount" type="number" min="0" step="0.01" required class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"></label><label class="text-xs font-medium text-slate-600">Devise<select id="profile-dime-currency" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="USD">USD</option><option value="FC">FC</option></select></label><label class="text-xs font-medium text-slate-600">Observation<input id="profile-dime-observation" maxlength="300" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"></label><div class="flex flex-wrap gap-2 sm:col-span-2"><button type="submit" class="rounded-lg bg-[var(--enoria-green)] px-4 py-2.5 text-sm font-semibold text-white">Enregistrer la dîme</button><button id="profile-dime-reset" type="button" class="rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-600">Vider</button></div><p id="profile-dime-feedback" class="hidden sm:col-span-2 rounded-lg p-3 text-sm"></p></form></section></div>';
+          const dimeForm=contentEl.querySelector<HTMLFormElement>("#profile-dime-form")!;
+          const dimeId=contentEl.querySelector<HTMLInputElement>("#profile-dime-id")!;
+          const dimeYear=contentEl.querySelector<HTMLSelectElement>("#profile-dime-year")!;
+          const dimeAmount=contentEl.querySelector<HTMLInputElement>("#profile-dime-amount")!;
+          const dimeCurrency=contentEl.querySelector<HTMLSelectElement>("#profile-dime-currency")!;
+          const dimeObservation=contentEl.querySelector<HTMLInputElement>("#profile-dime-observation")!;
+          const dimeFeedback=contentEl.querySelector<HTMLElement>("#profile-dime-feedback")!;
+          const resetDime=():void=>{dimeId.value="";dimeYear.value=years.find((item)=>item.id===activeYear?.id)?.id??years[0]?.id??"";dimeAmount.value="";dimeCurrency.value="USD";dimeObservation.value="";};
+          contentEl.querySelector<HTMLButtonElement>("#profile-dime-reset")!.addEventListener("click",resetDime);
+          contentEl.addEventListener("click",async(event)=>{
+            const target=event.target as HTMLElement;
+            const edit=target.closest<HTMLButtonElement>("[data-profile-edit-dime]");
+            if(edit?.dataset.profileEditDime){
+              const item=entries.find((entry)=>entry.id===edit.dataset.profileEditDime);
+              if(!item)return;
+              dimeId.value=item.id;dimeYear.value=item.annee_pastorale_id;dimeAmount.value=String(item.montant);dimeCurrency.value=item.devise;dimeObservation.value=item.observation??"";
+              dimeForm.scrollIntoView({behavior:"smooth",block:"center"});return;
+            }
+            const remove=target.closest<HTMLButtonElement>("[data-profile-delete-dime]");
+            if(remove?.dataset.profileDeleteDime){
+              if(!window.confirm("Supprimer définitivement cette dîme ?"))return;
+              const {error}=await supabase.from("dimes").delete().eq("id",remove.dataset.profileDeleteDime).eq("fidele_id",faithfulRecord.id);
+              if(error){dimeFeedback.textContent=error.message;dimeFeedback.className="sm:col-span-2 rounded-lg bg-rose-50 p-3 text-sm text-rose-700";dimeFeedback.classList.remove("hidden");return;}
+              await renderTab("dimes");
+            }
+          });
+          dimeForm.addEventListener("submit",async(event)=>{
+            event.preventDefault();
+            const amount=Number(dimeAmount.value);
+            if(!Number.isFinite(amount)||amount<0)return;
+            const payload={fidele_id:faithfulRecord.id,annee_pastorale_id:dimeYear.value,montant:amount,devise:dimeCurrency.value as "USD"|"FC",observation:dimeObservation.value.trim()||null};
+            const result=dimeId.value
+              ? await supabase.from("dimes").update(payload).eq("id",dimeId.value).eq("fidele_id",faithfulRecord.id)
+              : await supabase.from("dimes").upsert({...payload,created_by:context.user.id},{onConflict:"fidele_id,annee_pastorale_id"});
+            if(result.error){dimeFeedback.textContent=result.error.message;dimeFeedback.className="sm:col-span-2 rounded-lg bg-rose-50 p-3 text-sm text-rose-700";dimeFeedback.classList.remove("hidden");return;}
+            await renderTab("dimes");
+          });
           return;
         }
 
         if (tab === "famille") {
-          const { data, error } = await supabase.from("enfants").select("*").eq("fidele_parent_id", faithfulId).order("nom");
-          if (sequence !== tabSequence) return;
-          if (error) throw error;
-          const html = (data ?? []).map((child) => `
-            <article class="rounded-xl border border-slate-100 p-4"><h3 class="font-semibold text-slate-800">${escapeHtml(child.prenom)} ${escapeHtml(child.nom)}</h3>
-              <p class="mt-2 text-xs text-slate-500">Naissance : ${formatPartialDate(child.naissance_jour, child.naissance_mois, child.naissance_annee, child.naissance_precision)}</p>
-              <p class="mt-1 text-xs text-slate-500">Baptême : ${formatPartialDate(child.bapteme_jour, child.bapteme_mois, child.bapteme_annee, child.bapteme_precision)} · Statut : ${escapeHtml(child.statut_bapteme)}</p>
-              <p class="mt-1 text-xs text-slate-500">Confession : ${escapeHtml(child.confession)}</p></article>`).join("");
-          contentEl.innerHTML = `<section class="page-card p-5"><h2 class="font-semibold text-slate-800">Enfants</h2><div class="mt-4 space-y-3">${html || '<p class="text-sm text-slate-400">Aucun enfant enregistré dans ce dossier.</p>'}</div></section>`;
+          const { data, error } = await supabase.from("enfants").select("*").eq("fidele_parent_id", faithfulRecord.id).order("nom").order("prenom");
+          if(sequence!==tabSequence)return;
+          if(error)throw error;
+          const children=data??[];
+          const dateInput=(day:number|null,month:number|null,year:number|null)=>day&&month&&year?`${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`:"";
+          const cards=children.map((child)=>`
+            <article class="rounded-xl border border-slate-100 p-4"><div class="flex flex-wrap items-start justify-between gap-3"><div><h3 class="font-semibold text-slate-800">${escapeHtml(child.prenom)} ${escapeHtml(child.nom)}</h3>
+              <p class="mt-2 text-xs text-slate-500">Naissance : ${formatPartialDate(child.naissance_jour,child.naissance_mois,child.naissance_annee,child.naissance_precision)}</p>
+              <p class="mt-1 text-xs text-slate-500">Baptême : ${formatPartialDate(child.bapteme_jour,child.bapteme_mois,child.bapteme_annee,child.bapteme_precision)} · ${escapeHtml(child.statut_bapteme)}</p>
+              <p class="mt-1 text-xs text-slate-500">Confession : ${escapeHtml(child.confession)}</p></div>${canManageFaithful?`<div class="flex gap-2"><button type="button" data-edit-child="${escapeHtml(child.id)}" class="text-xs font-semibold text-emerald-700">Modifier</button><button type="button" data-delete-child="${escapeHtml(child.id)}" class="text-xs font-semibold text-rose-600">Supprimer</button></div>`:""}</div></article>`).join("");
+          contentEl.innerHTML=`<section class="page-card p-5"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="font-semibold text-slate-800">Enfants</h2><p class="mt-1 text-xs text-slate-500">${children.length} enfant(s) enregistré(s)</p></div>${canManageFaithful?'<button id="profile-add-child" type="button" class="rounded-lg bg-[var(--enoria-green)] px-3 py-2 text-xs font-semibold text-white">＋ Ajouter un enfant</button>':""}</div><div class="mt-4 space-y-3">${cards||'<p class="text-sm text-slate-400">Aucun enfant enregistré dans ce dossier.</p>'}</div>${canManageFaithful?`<form id="profile-child-form" class="mt-5 hidden rounded-xl border border-slate-100 bg-slate-50 p-4"><h3 id="profile-child-title" class="font-semibold text-slate-800">Ajouter un enfant</h3><input id="profile-child-id" type="hidden"><div class="mt-3 grid gap-3 sm:grid-cols-2"><label class="text-xs font-medium text-slate-600">Prénom<input id="profile-child-first" required maxlength="100" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"></label><label class="text-xs font-medium text-slate-600">Nom<input id="profile-child-last" required maxlength="100" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"></label><label class="text-xs font-medium text-slate-600">Date de naissance<input id="profile-child-birth" type="date" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"></label><label class="text-xs font-medium text-slate-600">Date de baptême<input id="profile-child-baptism" type="date" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"></label><label class="text-xs font-medium text-slate-600">Lieu du baptême<input id="profile-child-place" maxlength="160" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"></label><label class="text-xs font-medium text-slate-600">Statut du baptême<select id="profile-child-status" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="inconnu">Inconnu</option><option value="baptise">Baptisé</option><option value="non_baptise">Non baptisé</option></select></label><label class="text-xs font-medium text-slate-600">Confession<select id="profile-child-faith" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="inconnue">Inconnue</option><option value="catholique">Catholique</option><option value="non_catholique">Non catholique</option></select></label><label class="text-xs font-medium text-slate-600">N° d’acte<input id="profile-child-act" maxlength="80" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"></label><label class="text-xs font-medium text-slate-600">Page du registre<input id="profile-child-page" maxlength="80" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"></label></div><div class="mt-4 flex gap-2"><button type="submit" class="rounded-lg bg-[var(--enoria-green)] px-4 py-2.5 text-sm font-semibold text-white">Enregistrer</button><button id="profile-child-cancel" type="button" class="rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-600">Annuler</button></div><p id="profile-child-feedback" class="mt-3 hidden rounded-lg p-3 text-sm"></p></form>`:''}</section>`;
+          if(canManageFaithful){
+            const childForm=contentEl.querySelector<HTMLFormElement>("#profile-child-form")!;
+            const childField=(id:string)=>childForm.querySelector<HTMLInputElement|HTMLSelectElement>("#"+id)!;
+            const resetChild=()=>{childForm.reset();childField("profile-child-id").value="";childForm.classList.add("hidden");contentEl.querySelector<HTMLElement>("#profile-child-title")!.textContent="Ajouter un enfant";};
+            const fillDate=(value:string)=>{if(!value)return {jour:null,mois:null,annee:null,precision:"inconnue" as Precision};const date=new Date(value+"T00:00:00");return {jour:date.getDate(),mois:date.getMonth()+1,annee:date.getFullYear(),precision:"exacte" as Precision};};
+            contentEl.querySelector<HTMLButtonElement>("#profile-add-child")!.addEventListener("click",()=>{resetChild();childForm.classList.remove("hidden");childForm.scrollIntoView({behavior:"smooth",block:"center"});});
+            contentEl.querySelector<HTMLButtonElement>("#profile-child-cancel")!.addEventListener("click",resetChild);
+            contentEl.addEventListener("click",async(event)=>{
+              const target=event.target as HTMLElement;
+              const edit=target.closest<HTMLButtonElement>("[data-edit-child]");
+              if(edit?.dataset.editChild){
+                const child=children.find((item)=>item.id===edit.dataset.editChild);if(!child)return;
+                childForm.classList.remove("hidden");contentEl.querySelector<HTMLElement>("#profile-child-title")!.textContent="Modifier l’enfant";
+                childField("profile-child-id").value=child.id;childField("profile-child-first").value=child.prenom;childField("profile-child-last").value=child.nom;
+                childField("profile-child-birth").value=dateInput(child.naissance_jour,child.naissance_mois,child.naissance_annee);
+                childField("profile-child-baptism").value=dateInput(child.bapteme_jour,child.bapteme_mois,child.bapteme_annee);
+                childField("profile-child-place").value=child.lieu_bapteme??"";childField("profile-child-status").value=child.statut_bapteme;childField("profile-child-faith").value=child.confession;
+                childField("profile-child-act").value=child.numero_acte??"";childField("profile-child-page").value=child.page_registre??"";
+                childForm.scrollIntoView({behavior:"smooth",block:"center"});return;
+              }
+              const remove=target.closest<HTMLButtonElement>("[data-delete-child]");
+              if(remove?.dataset.deleteChild){
+                if(!window.confirm("Supprimer cet enfant du dossier ?"))return;
+                const result=await supabase.from("enfants").delete().eq("id",remove.dataset.deleteChild).eq("fidele_parent_id",faithfulRecord.id);
+                if(result.error){const fb=childForm.querySelector<HTMLElement>("#profile-child-feedback")!;fb.textContent=result.error.message;fb.className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700";fb.classList.remove("hidden");return;}
+                await renderTab("famille");
+              }
+            });
+            childForm.addEventListener("submit",async(event)=>{
+              event.preventDefault();
+              const birth=fillDate(childField("profile-child-birth").value);const baptism=fillDate(childField("profile-child-baptism").value);
+              const act=childField("profile-child-act").value.trim();const page=childField("profile-child-page").value.trim();
+              const fb=childForm.querySelector<HTMLElement>("#profile-child-feedback")!;
+              if(Boolean(act)!==Boolean(page)){fb.textContent="Le numéro d’acte et la page doivent être renseignés ensemble.";fb.className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800";fb.classList.remove("hidden");return;}
+              const payload={fidele_parent_id:faithfulRecord.id,prenom:childField("profile-child-first").value.trim(),nom:childField("profile-child-last").value.trim(),naissance_jour:birth.jour,naissance_mois:birth.mois,naissance_annee:birth.annee,naissance_precision:birth.precision,lieu_bapteme:childField("profile-child-place").value.trim()||null,bapteme_jour:baptism.jour,bapteme_mois:baptism.mois,bapteme_annee:baptism.annee,bapteme_precision:baptism.precision,statut_bapteme:childField("profile-child-status").value,confession:childField("profile-child-faith").value,numero_acte:act||null,page_registre:page||null};
+              const id=childField("profile-child-id").value;
+              const result=id?await supabase.from("enfants").update(payload).eq("id",id).eq("fidele_parent_id",faithfulRecord.id):await supabase.from("enfants").insert({...payload,created_by:context.user.id});
+              if(result.error){fb.textContent=result.error.message;fb.className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700";fb.classList.remove("hidden");return;}
+              await renderTab("famille");
+            });
+          }
           return;
         }
 
