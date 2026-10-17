@@ -154,6 +154,7 @@ function renderTrendChart(node: HTMLElement, months: MonthPoint[], series: Serie
   const maxValue = Math.max(4, ...totals, ...series.flatMap((item) => item.values));
   const maxAxis = Math.ceil(maxValue / 5) * 5 || 5;
   const x = (index: number): number => left + (months.length <= 1 ? plotWidth / 2 : index * plotWidth / (months.length - 1));
+  const groupCenter = (index: number): number => left + (index + 0.5) * plotWidth / months.length;
   const y = (value: number): number => top + plotHeight - (value / maxAxis) * plotHeight;
   const grid = Array.from({ length: 5 }, (_, index) => {
     const value = maxAxis * index / 4;
@@ -172,14 +173,14 @@ function renderTrendChart(node: HTMLElement, months: MonthPoint[], series: Serie
           const rectHeight = value / maxAxis * plotHeight;
           const rectY = y(running + value);
           running += value;
-          return '<rect x="' + (x(index) - groupWidth * .25) + '" y="' + rectY + '" width="' + (groupWidth * .5) + '" height="' + Math.max(0, rectHeight) + '" rx="4" fill="' + item.color + '"><title>' + esc(item.label) + ' · ' + esc(month.label) + ' : ' + numberFr(value) + '</title></rect>';
+          return '<rect x="' + (groupCenter(index) - groupWidth * .25) + '" y="' + rectY + '" width="' + (groupWidth * .5) + '" height="' + Math.max(0, rectHeight) + '" rx="4" fill="' + item.color + '"><title>' + esc(item.label) + ' · ' + esc(month.label) + ' : ' + numberFr(value) + '</title></rect>';
         }).join("");
       }).join("");
     } else {
       const barWidth = Math.min(25, groupWidth / (series.length + 1));
       marks = months.map((month, index) => series.map((item, seriesIndex) => {
         const value = item.values[index] ?? 0;
-        const xx = x(index) + (seriesIndex - (series.length - 1) / 2) * (barWidth + 2) - barWidth / 2;
+        const xx = groupCenter(index) + (seriesIndex - (series.length - 1) / 2) * (barWidth + 2) - barWidth / 2;
         const yy = y(value);
         return '<rect x="' + xx + '" y="' + yy + '" width="' + barWidth + '" height="' + Math.max(0, top + plotHeight - yy) + '" rx="3" fill="' + item.color + '"><title>' + esc(item.label) + ' · ' + esc(month.label) + ' : ' + numberFr(value) + '</title></rect>';
       }).join("")).join("");
@@ -199,7 +200,7 @@ function renderTrendChart(node: HTMLElement, months: MonthPoint[], series: Serie
       return area + trend + line + circles;
     }).join("");
   }
-  const xLabels = months.map((month, index) => '<text x="' + x(index) + '" y="' + (height - 18) + '" text-anchor="middle" fill="currentColor" font-size="11">' + esc(month.label) + '</text>').join("");
+  const xLabels = months.map((month, index) => '<text x="' + ((style === "columns" || style === "stacked") ? groupCenter(index) : x(index)) + '" y="' + (height - 18) + '" text-anchor="middle" fill="currentColor" font-size="11">' + esc(month.label) + '</text>').join("");
   const svg = '<svg class="sacrament-chart-svg" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Évolution des sacrements au cours des quatre derniers mois">' + grid + marks + xLabels + '</svg>';
   const legend = '<div class="flex flex-wrap gap-x-5 gap-y-2">' + series.map((item) => '<span class="flex items-center gap-2 text-xs text-slate-600"><i class="h-2.5 w-2.5 rounded-full" style="background:' + item.color + '"></i>' + esc(item.label) + '</span>').join("") + '</div>';
   node.innerHTML = '<div class="min-w-[520px]">' + svg + '</div>' + legend +
