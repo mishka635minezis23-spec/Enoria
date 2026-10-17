@@ -148,7 +148,7 @@ export function mountFaithfulList(container: HTMLElement, context: UserContext, 
         .range(from, from + PAGE_SIZE - 1);
 
       if (term) {
-        const tokens = term.split(/\\s+/).filter(Boolean);
+        const tokens = term.split(/\s+/).filter(Boolean);
         const expression = tokens.map((part) => `prenom.ilike.%${part}%,nom.ilike.%${part}%`).join(",");
         query = query.or(expression);
       }
@@ -246,7 +246,7 @@ export function mountFaithfulList(container: HTMLElement, context: UserContext, 
     const term = safeSearchTerm(searchEl.value);
     const sequence = ++suggestionSequence;
     if (term.length < 2) { suggestionsNode.classList.add("hidden"); suggestionsNode.innerHTML = ""; return; }
-    const tokens = term.split(/\\s+/).filter(Boolean);
+    const tokens = term.split(/\s+/).filter(Boolean);
     const expression = tokens.map((part) => `prenom.ilike.%${part}%,nom.ilike.%${part}%`).join(",");
     const result = await getSupabaseClient().from("fideles").select("id,prenom,nom").or(expression).order("nom").limit(8);
     if (sequence !== suggestionSequence) return;
