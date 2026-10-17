@@ -79,9 +79,6 @@ function formatDate(entry: Pick<SacramentEntry, "day" | "month" | "year" | "prec
   if (entry.precision === "mois" || !entry.day) return monthLabel(entry.year, entry.month);
   return new Intl.DateTimeFormat("fr-CD", { dateStyle: "medium" }).format(new Date(entry.year, entry.month - 1, entry.day));
 }
-function csvSafe(value: unknown): string {
-  return '"' + String(value ?? "").replace(/"/g, '""') + '"';
-}
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -338,7 +335,7 @@ function createXlsx(sheets: Sheet[]): Blob {
     { name: "xl/styles.xml", content: styles },
     ...sheetFiles
   ]);
-  return new Blob([archive], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  return new Blob([archive.buffer as ArrayBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 async function fetchFaithfulNames(db: ReturnType<typeof getSupabaseClient>, ids: string[]): Promise<Map<string, string>> {
   const names = new Map<string, string>();
@@ -419,7 +416,6 @@ export async function mountSacramentsPage(
   let names = new Map<string, string>();
   let selectedReport: { title: string; rows: SacramentEntry[]; year: number; month: number | null; type: string; scope: string } | null = null;
   let chartStyle: ChartStyle = "line";
-  let renderSequence = 0;
 
   feedback.className = "hidden";
   reportFeedback.className = "hidden";
