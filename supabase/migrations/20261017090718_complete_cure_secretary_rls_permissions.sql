@@ -86,7 +86,5 @@ grant select, insert on public.historique_actions to authenticated;
 grant select, insert, update, delete on public.affectations_utilisateurs to authenticated;
 
 revoke insert, delete on public.paroisses from authenticated;
-revoke update on public.paroisses from authenticated;
-grant update (theme) on public.paroisses to authenticated;
 
 revoke insert, delete on public.utilisateurs from authenticated;
