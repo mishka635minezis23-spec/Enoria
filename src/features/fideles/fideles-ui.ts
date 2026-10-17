@@ -435,14 +435,15 @@ function mountFaithfulCreateWizard(
       marriageType.addEventListener("change", syncSpouseDeath);
 
       const childList = root.querySelector<HTMLElement>("#faithful-child-list")!;
+      let nextChildIndex = 0;
       const addChild = (): void => {
-        const index = childList.querySelectorAll(".faithful-child-entry").length;
-        if (index >= 5) {
+        if (childList.querySelectorAll(".faithful-child-entry").length >= 5) {
           feedback.textContent = "Le formulaire initial prévoit au maximum cinq emplacements pour les enfants.";
           feedback.className = "rounded-xl bg-amber-50 p-3 text-sm text-amber-800";
           feedback.classList.remove("hidden");
           return;
         }
+        const index = nextChildIndex++;
         childList.insertAdjacentHTML("beforeend", childCard(index));
         for (const prefix of ["child-" + index + "-birth","child-" + index + "-baptism"]) {
           form.querySelector<HTMLSelectElement>("#" + prefix + "-precision")!.value = "inconnue";
