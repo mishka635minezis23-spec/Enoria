@@ -27,9 +27,9 @@ export const APP_CONFIG: Readonly<AppConfig> = Object.freeze({
   dioceseName: "",
   locale: "fr-CD",
   theme: {
-    primary: "#176653",
-    primaryDark: "#123b32",
-    surface: "#f8fafc"
+    primary: "#0B4FD8",
+    primaryDark: "#0A3FB0",
+    surface: "#F5F6F8"
   },
   supabase: {
     url: null,
