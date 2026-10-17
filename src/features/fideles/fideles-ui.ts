@@ -1217,9 +1217,7 @@ export async function mountFaithfulProfile(
               try {
                 const date = collectPartialDate(form,prefix);
                 const spouseBirth = collectPartialDate(form,baptismPrefix);
-                const spouseDeath = typeSelect.value === "obiit_conjux"
-                  ? collectPartialDate(form,deathPrefix)
-                  : {precision:"inconnue" as Precision,jour:null,mois:null,annee:null};
+                const spouseDeath = collectPartialDate(form,deathPrefix);
                 const act = String(values.get("numero_acte") ?? "").trim();
                 const page = String(values.get("page_registre") ?? "").trim();
                 if ((act && !page) || (!act && page)) throw new Error("Le numéro d’acte et la page doivent être renseignés ensemble.");
