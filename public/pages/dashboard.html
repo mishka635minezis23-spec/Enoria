@@ -1,19 +1,58 @@
-<section class="space-y-6" data-dashboard>
-  <header class="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-    <div><p class="text-xs font-semibold uppercase tracking-widest text-emerald-700">Vue d'ensemble</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Tableau de bord</h1><p id="dashboard-year" class="mt-1 text-sm text-slate-500">Chargement de l'année pastorale…</p></div>
-    <span class="w-fit rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">Données en direct · RLS active</span>
+<section class="dashboard-page space-y-5" data-dashboard>
+  <header class="dashboard-heading flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+    <div>
+      <p class="dashboard-eyebrow">Vue d'ensemble</p>
+      <h1 class="dashboard-title">Tableau de bord</h1>
+      <p id="dashboard-year" class="mt-1 text-sm text-slate-500">Chargement de l'année pastorale…</p>
+    </div>
+    <span class="dashboard-live"><span aria-hidden="true"></span>Données en direct · RLS active</span>
   </header>
-  <div id="dashboard-feedback" class="hidden rounded-lg p-3 text-sm" role="status"></div>
-  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-    <article class="page-card p-5"><p class="text-xs font-medium text-slate-500">Fidèles vivants</p><p id="stat-faithful-active" class="mt-3 text-3xl font-semibold text-slate-300">—</p><p class="mt-2 text-xs text-slate-400">Selon les dossiers accessibles</p></article>
-    <article class="page-card p-5"><p class="text-xs font-medium text-slate-500">Fidèles décédés</p><p id="stat-faithful-deceased" class="mt-3 text-3xl font-semibold text-slate-300">—</p><p class="mt-2 text-xs text-slate-400">Selon les dossiers accessibles</p></article>
-    <article class="page-card p-5"><p class="text-xs font-medium text-slate-500">Sacrements cette année</p><p id="stat-sacraments" class="mt-3 text-3xl font-semibold text-slate-300">—</p><p class="mt-2 text-xs text-slate-400">Année pastorale active</p></article>
-    <article class="page-card p-5"><p class="text-xs font-medium text-slate-500">Dîmes cette année</p><p id="stat-tithes" class="mt-3 text-3xl font-semibold text-slate-300">—</p><p class="mt-2 text-xs text-slate-400">Affiché selon les droits du compte</p></article>
+
+  <div id="dashboard-feedback" class="hidden rounded-xl p-3 text-sm" role="status"></div>
+
+  <div class="dashboard-stat-grid grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <article class="dashboard-stat page-card">
+      <span class="dashboard-stat-icon" aria-hidden="true">♙</span>
+      <p id="stat-faithful-active" class="dashboard-stat-value">—</p>
+      <p class="dashboard-stat-label">Fidèles vivants</p>
+      <p class="dashboard-stat-note">Dossiers accessibles</p>
+    </article>
+    <article class="dashboard-stat page-card">
+      <span class="dashboard-stat-icon" aria-hidden="true">♧</span>
+      <p id="stat-faithful-deceased" class="dashboard-stat-value">—</p>
+      <p class="dashboard-stat-label">Fidèles décédés</p>
+      <p class="dashboard-stat-note">Dossiers accessibles</p>
+    </article>
+    <article class="dashboard-stat page-card">
+      <span class="dashboard-stat-icon" aria-hidden="true">✝</span>
+      <p id="stat-sacraments" class="dashboard-stat-value">—</p>
+      <p class="dashboard-stat-label">Sacrements cette année</p>
+      <p class="dashboard-stat-note">Année pastorale active</p>
+    </article>
+    <article class="dashboard-stat page-card">
+      <span class="dashboard-stat-icon" aria-hidden="true">▤</span>
+      <p id="stat-tithes" class="dashboard-stat-value dashboard-stat-value-compact">—</p>
+      <p class="dashboard-stat-label">Dîmes cette année</p>
+      <p class="dashboard-stat-note">Selon les droits du compte</p>
+    </article>
   </div>
-  <div class="grid gap-4 xl:grid-cols-2">
-    <article class="page-card p-6"><h2 class="font-semibold text-slate-800">Sacrements par type</h2><p class="mt-1 text-xs text-slate-500">Année pastorale active</p><div id="chart-sacraments" class="mt-5 space-y-4"><p class="text-sm text-slate-400">Chargement…</p></div></article>
-    <article class="page-card p-6"><h2 class="font-semibold text-slate-800">Fidèles par communauté</h2><p class="mt-1 text-xs text-slate-500">Répartition des dossiers accessibles</p><div id="chart-communities" class="mt-5 space-y-4"><p class="text-sm text-slate-400">Chargement…</p></div></article>
+
+  <div class="dashboard-chart-grid grid gap-5 xl:grid-cols-2">
+    <article class="dashboard-panel page-card">
+      <div class="dashboard-panel-heading">
+        <div><h2>Sacrements par type</h2><p>Répartition de l'année pastorale active</p></div>
+        <span class="dashboard-panel-mark" aria-hidden="true">✝</span>
+      </div>
+      <div id="chart-sacraments" class="dashboard-bars mt-6 space-y-5"><p class="text-sm text-slate-400">Chargement…</p></div>
+    </article>
+    <article class="dashboard-panel page-card">
+      <div class="dashboard-panel-heading">
+        <div><h2>Fidèles par communauté</h2><p>Répartition des dossiers accessibles</p></div>
+        <span class="dashboard-panel-mark" aria-hidden="true">⌂</span>
+      </div>
+      <div id="chart-communities" class="dashboard-bars mt-6 space-y-5"><p class="text-sm text-slate-400">Chargement…</p></div>
+    </article>
   </div>
-  <article class="page-card p-6"><h2 class="font-semibold text-slate-800">Évolution des sacrements par année pastorale</h2><p class="mt-1 text-xs text-slate-500">Baptêmes, Eucharisties et Confirmations · hors événements matrimoniaux</p><div id="chart-sacrament-trend" class="mt-4 min-h-48"><p class="text-sm text-slate-400">Chargement…</p></div></article>
-  <p class="text-xs leading-5 text-slate-400">Les chiffres proviennent des vues statistiques sécurisées de la base. Les résultats visibles dépendent des permissions RLS du compte connecté.</p>
+
+  <p class="dashboard-footnote">Les chiffres proviennent des vues statistiques sécurisées de la base. Les résultats visibles dépendent des permissions RLS du compte connecté.</p>
 </section>
