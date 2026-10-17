@@ -437,8 +437,8 @@ function mountFaithfulCreateWizard(
       const childList = root.querySelector<HTMLElement>("#faithful-child-list")!;
       const addChild = (): void => {
         const index = childList.querySelectorAll(".faithful-child-entry").length;
-        if (index >= 20) {
-          feedback.textContent = "Le formulaire accepte jusqu’à 20 enfants par enregistrement.";
+        if (index >= 5) {
+          feedback.textContent = "Le formulaire initial prévoit au maximum cinq emplacements pour les enfants.";
           feedback.className = "rounded-xl bg-amber-50 p-3 text-sm text-amber-800";
           feedback.classList.remove("hidden");
           return;
@@ -455,7 +455,6 @@ function mountFaithfulCreateWizard(
         if (!button) return;
         button.closest(".faithful-child-entry")?.remove();
         [...childList.querySelectorAll<HTMLElement>(".faithful-child-entry")].forEach((node, index) => {
-          node.dataset.childIndex = String(index);
           node.querySelector("h4")!.textContent = "Enfant " + (index + 1);
         });
       });
@@ -583,6 +582,7 @@ function mountFaithfulCreateWizard(
         if (yearSelect) yearSelect.value = years.some((item) => item.id === activeYear?.id) ? activeYear!.id : (years.find((item) => item.active)?.id ?? years[0]!.id);
       }
       setStep(1);
+      loading = false;
       form.querySelector<HTMLInputElement>('input[name="prenom"]')?.focus();
     } catch (error) {
       const fb = container.querySelector<HTMLElement>("#faithful-feedback");
@@ -1039,6 +1039,27 @@ export async function mountFaithfulProfile(
               }
             });
           }
+          return;
+        }
+
+        if (tab === "dimes") {
+          if (!canManageFaithful) {
+            contentEl.innerHTML = '<section class="page-card p-5 text-sm text-slate-500">La consultation des dîmes est réservée à la secrétaire et au curé.</section>';
+            return;
+          }
+          const [dimeResult,yearResult] = await Promise.all([
+            supabase.from("dimes").select("id,montant,devise,observation,annee_pastorale_id,created_at").eq("fidele_id",faithfulRecord.id).order("created_at",{ascending:false}),
+            supabase.from("annees_pastorales").select("id,libelle,date_debut").eq("paroisse_id",faithfulRecord.paroisse_id).order("date_debut",{ascending:false})
+          ]);
+          if(sequence!==tabSequence)return;
+          if(dimeResult.error)throw dimeResult.error;
+          if(yearResult.error)throw yearResult.error;
+          const years=new Map((yearResult.data??[]).map((item)=>[item.id,item.libelle]));
+          const entries=dimeResult.data??[];
+          const totals=new Map<string,number>();
+          for(const item of entries)totals.set(item.devise,(totals.get(item.devise)??0)+item.montant);
+          const rows=entries.map((item)=>'<tr class="border-b border-slate-100 last:border-0"><td class="px-3 py-3 font-medium text-slate-800">'+escapeHtml(years.get(item.annee_pastorale_id)??"Année inconnue")+'</td><td class="px-3 py-3 text-right tabular-nums">'+escapeHtml(item.montant.toLocaleString("fr-CD",{maximumFractionDigits:2}))+'</td><td class="px-3 py-3">'+escapeHtml(item.devise)+'</td><td class="px-3 py-3 text-slate-500">'+escapeHtml(item.observation??"—")+'</td></tr>').join("");
+          contentEl.innerHTML='<div class="space-y-4"><section class="page-card p-5"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="font-semibold text-slate-800">Dîmes du fidèle</h2><p class="mt-1 text-xs text-slate-500">Registre distinct du livret sacramentel · une contribution par année pastorale</p></div><span class="rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700">'+entries.length+' contribution(s)</span></div><div class="mt-4 grid gap-3 sm:grid-cols-2"><div class="rounded-xl border border-slate-100 bg-slate-50 p-4"><p class="text-xs text-slate-500">Total en USD</p><p class="mt-1 text-xl font-semibold tabular-nums text-slate-900">'+(totals.get("USD")??0).toLocaleString("fr-CD",{maximumFractionDigits:2})+'</p></div><div class="rounded-xl border border-slate-100 bg-slate-50 p-4"><p class="text-xs text-slate-500">Total en FC</p><p class="mt-1 text-xl font-semibold tabular-nums text-slate-900">'+(totals.get("FC")??0).toLocaleString("fr-CD",{maximumFractionDigits:2})+'</p></div></div><div class="mt-5 overflow-x-auto"><table class="w-full min-w-[520px] text-left text-sm"><thead class="border-y border-slate-100 bg-slate-50 text-xs text-slate-500"><tr><th class="px-3 py-3 font-medium">Année pastorale</th><th class="px-3 py-3 text-right font-medium">Montant</th><th class="px-3 py-3 font-medium">Devise</th><th class="px-3 py-3 font-medium">Observation</th></tr></thead><tbody>'+(rows||'<tr><td colspan="4" class="px-3 py-12 text-center text-sm text-slate-400">Aucune dîme enregistrée pour ce fidèle.</td></tr>')+'</tbody></table></div></section></div>';
           return;
         }
 
