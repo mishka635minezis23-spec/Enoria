@@ -1,19 +1,89 @@
 <section class="space-y-6" data-sacraments-page>
-  <header><p class="text-xs font-semibold uppercase tracking-widest text-emerald-700">Registres sacramentels</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Gestion des sacrements</h1><p class="mt-1 text-sm text-slate-500">Recherche un fidèle pour consulter son livret sacramentel.</p></header>
-  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-    <article class="page-card p-4"><p class="text-xs font-medium text-slate-500">Baptême</p><p class="mt-1 text-sm font-semibold text-slate-800">Registre de référence</p></article>
-    <article class="page-card p-4"><p class="text-xs font-medium text-slate-500">Eucharistie</p><p class="mt-1 text-sm font-semibold text-slate-800">Première communion</p></article>
-    <article class="page-card p-4"><p class="text-xs font-medium text-slate-500">Confirmation</p><p class="mt-1 text-sm font-semibold text-slate-800">Registre de confirmation</p></article>
-    <article class="page-card p-4"><p class="text-xs font-medium text-slate-500">Mariage</p><p class="mt-1 text-sm font-semibold text-slate-800">Événements matrimoniaux</p></article>
+  <header class="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Pilotage pastoral · Registres</p>
+      <h1 class="mt-2 text-2xl font-bold tracking-tight text-slate-900">Statistiques des sacrements</h1>
+      <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Suivez les célébrations, comparez les sacrements dans le temps et éditez des rapports mensuels ou annuels à partir des registres paroissiaux.</p>
+    </div>
+    <button id="sacrament-export-excel" type="button" class="w-fit rounded-xl bg-[var(--enoria-green)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-90">↓ Exporter les statistiques en Excel</button>
+  </header>
+
+  <section class="page-card p-4 sm:p-5">
+    <div class="mb-3 flex items-center gap-2"><span class="text-lg">⌁</span><h2 class="text-sm font-bold text-slate-800">Périmètre d’analyse</h2></div>
+    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <label class="block text-xs font-semibold text-slate-600">Année pastorale<select id="sacrament-year" class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="all">Toutes les années pastorales</option></select></label>
+      <label class="block text-xs font-semibold text-slate-600">Quartier<select id="sacrament-quarter" class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="">Tous les quartiers visibles</option></select></label>
+      <label class="block text-xs font-semibold text-slate-600">Communauté<select id="sacrament-community" class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="">Toutes les communautés visibles</option></select></label>
+    </div>
+    <p class="mt-3 text-[11px] text-slate-400">Les résultats respectent automatiquement les droits d’accès de votre compte et les communautés autorisées.</p>
+  </section>
+
+  <div id="sacrament-feedback" class="hidden rounded-xl p-4 text-sm" role="status"></div>
+
+  <section>
+    <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
+      <div><p class="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">Vue d’ensemble</p><h2 class="mt-1 text-lg font-bold text-slate-900">Les chiffres clés</h2></div>
+      <p class="text-xs text-slate-400">Synthèse de la période sélectionnée</p>
+    </div>
+    <div id="sacrament-kpis" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <article class="page-card p-4 text-sm text-slate-400">Calcul des indicateurs…</article>
+    </div>
+    <article id="sacrament-insights" class="page-card mt-3 p-4">
+      <p class="text-sm text-slate-400">Préparation de l’analyse…</p>
+    </article>
+  </section>
+
+  <div class="grid gap-4 xl:grid-cols-5">
+    <section class="page-card p-5 xl:col-span-2">
+      <div class="mb-4"><p class="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-700">Répartition</p><h2 class="mt-1 text-base font-bold text-slate-900">Poids de chaque sacrement</h2><p class="mt-1 text-xs text-slate-500">Part de chaque célébration dans le total filtré.</p></div>
+      <div id="sacrament-donut" class="min-h-[230px]"><p class="text-sm text-slate-400">Chargement…</p></div>
+    </section>
+    <section class="page-card p-5 xl:col-span-3">
+      <div class="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+        <div><p class="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-700">Dynamique mensuelle</p><h2 class="mt-1 text-base font-bold text-slate-900">Tendance sur les quatre derniers mois</h2><p class="mt-1 text-xs text-slate-500">Une série distincte pour chaque sacrement, avec sa ligne de tendance pointillée.</p></div>
+        <div class="flex flex-wrap gap-1 rounded-xl bg-slate-50 p-1" role="group" aria-label="Style du graphique">
+          <button type="button" data-sacrament-chart-style="line" aria-pressed="true" class="sacrament-chart-toggle is-active">Courbes</button>
+          <button type="button" data-sacrament-chart-style="area" aria-pressed="false" class="sacrament-chart-toggle">Aires</button>
+          <button type="button" data-sacrament-chart-style="columns" aria-pressed="false" class="sacrament-chart-toggle">Colonnes</button>
+          <button type="button" data-sacrament-chart-style="stacked" aria-pressed="false" class="sacrament-chart-toggle">Empilé</button>
+        </div>
+      </div>
+      <div id="sacrament-trend-chart" class="overflow-x-auto"><p class="text-sm text-slate-400">Chargement du graphique…</p></div>
+    </section>
   </div>
-  <article class="page-card p-5">
-    <form id="sacrament-search-form" class="flex flex-col gap-3 sm:flex-row">
-      <label class="min-w-0 flex-1 text-xs font-medium text-slate-600">Nom ou prénom du fidèle<input id="sacrament-search" type="search" maxlength="80" placeholder="Rechercher dans les dossiers accessibles…" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100" /></label>
-      <button type="submit" class="self-end rounded-lg bg-[var(--enoria-green)] px-4 py-2.5 text-sm font-semibold text-white">Rechercher</button>
+
+  <div class="grid gap-4 xl:grid-cols-2">
+    <section class="page-card p-5">
+      <div class="mb-4"><p class="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-700">Lecture chiffrée</p><h2 class="mt-1 text-base font-bold text-slate-900">Comparaison des quatre mois</h2></div>
+      <div id="sacrament-month-table"><p class="text-sm text-slate-400">Chargement…</p></div>
+    </section>
+    <section class="page-card p-5">
+      <div class="mb-4"><p class="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-700">Historique</p><h2 class="mt-1 text-base font-bold text-slate-900">Bilan par année pastorale</h2><p class="mt-1 text-xs text-slate-500">Comparaison des volumes enregistrés dans chaque année.</p></div>
+      <div id="sacrament-annual-chart" class="space-y-4"><p class="text-sm text-slate-400">Chargement…</p></div>
+    </section>
+  </div>
+
+  <section class="page-card p-5">
+    <div class="mb-4"><p class="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-700">Tableau de bord</p><h2 class="mt-1 text-base font-bold text-slate-900">Détail statistique par sacrement</h2><p class="mt-1 text-xs text-slate-500">Total cumulé, derniers mois, évolution et part relative.</p></div>
+    <div id="sacrament-summary-table"><p class="text-sm text-slate-400">Chargement…</p></div>
+  </section>
+
+  <section class="page-card p-5 sm:p-6">
+    <div class="mb-5">
+      <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-700">Édition de rapports</p>
+      <h2 class="mt-1 text-lg font-bold text-slate-900">Rapport mensuel ou annuel</h2>
+      <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Produisez un rapport distinct pour le baptême, l’Eucharistie, la confirmation ou le mariage. Le rapport contient les chiffres de synthèse et la liste détaillée des célébrations de la période.</p>
+    </div>
+    <form id="sacrament-report-form" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <label class="block text-xs font-semibold text-slate-600">Sacrement<select id="sacrament-report-type" class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="tous">Tous les sacrements</option><option value="bapteme">Baptême</option><option value="eucharistie">Eucharistie</option><option value="confirmation">Confirmation</option><option value="mariage">Mariage</option></select></label>
+      <label class="block text-xs font-semibold text-slate-600">Période<select id="sacrament-report-period" class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="monthly">Rapport mensuel</option><option value="annual">Rapport annuel</option></select></label>
+      <label class="block text-xs font-semibold text-slate-600">Année civile<select id="sacrament-report-year" class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="">Chargement…</option></select></label>
+      <label class="block text-xs font-semibold text-slate-600">Mois<select id="sacrament-report-month" class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="">Choisir un mois</option></select></label>
+      <div class="flex items-end sm:col-span-2 xl:col-span-4"><button id="sacrament-report-generate" type="submit" class="rounded-xl bg-[var(--enoria-green)] px-5 py-3 text-sm font-bold text-white shadow-sm hover:opacity-90">Générer le rapport</button></div>
     </form>
-    <div id="sacrament-search-feedback" class="mt-4 hidden rounded-lg p-3 text-sm" role="status"></div>
-    <div id="sacrament-search-results" class="mt-4 divide-y divide-slate-100"><p class="py-8 text-center text-sm text-slate-400">Chargement des fidèles…</p></div>
-    <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-4"><p id="sacrament-search-count" class="text-xs text-slate-500">Chargement…</p><div class="flex items-center gap-2"><button id="sacrament-prev" type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs disabled:opacity-40">Précédent</button><span id="sacrament-page" class="text-xs text-slate-500">Page 1</span><button id="sacrament-next" type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs disabled:opacity-40">Suivant</button></div></div>
-  </article>
-  <p class="text-xs leading-5 text-slate-400">Les numéros d'acte et pages du registre papier sont conservés dans le dossier. Un duplicata de certificat exige une validation du curé.</p>
+    <div id="sacrament-report-feedback" class="mt-4 hidden rounded-xl p-3 text-sm" role="status"></div>
+    <div id="sacrament-report-output" class="hidden mt-6 border-t border-slate-100 pt-5"></div>
+  </section>
+
+  <p class="text-[11px] leading-5 text-slate-400">Méthode de calcul : les statistiques mensuelles utilisent le mois et l’année inscrits dans le registre sacramentel. Les rapports annuels incluent également les actes dont le mois n’a pas été renseigné. Pour les mariages, seuls les mariages célébrés et les nouvelles noces sont comptabilisés ; les mentions avant baptême et les décès de conjoint restent hors du total des mariages.</p>
 </section>

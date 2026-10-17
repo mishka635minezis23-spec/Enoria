@@ -239,7 +239,7 @@ function renderApplication(context: UserContext, activePastoralYear: ActivePasto
       } else if (route === "dashboard") {
         void mountDashboard(content, context, activePastoralYear);
       } else if (route === "sacrements") {
-        mountSacramentsPage(content);
+        void mountSacramentsPage(content, context, activePastoralYear);
       } else if (route === "fideles" && faithfulId) {
         const cleanup = await mountFaithfulProfile(content, context, faithfulId, activePastoralYear);
         if (sequence !== renderSequence) cleanup();
