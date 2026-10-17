@@ -842,13 +842,12 @@ export async function mountFaithfulProfile(
       };
 
       const config = getAppConfig();
-      const inkByColor: Record<string,string> = {
-        rose:"#9d174d", bleu:"#2b3fb0", lavande:"#6d28d9", sauge:"#276749", or:"#946200"
-      };
-      const ink = inkByColor[faithfulRecord.carte_couleur] ?? inkByColor.rose;
+      // L'encre reste noire pour toutes les couleurs ; seule la teinte du papier varie.
+      const ink = "#111111";
+      const paper = CARD_COLORS.find((item) => item.key === faithfulRecord.carte_couleur)?.gradient ?? CARD_COLORS[0].gradient;
       const diocese = config.dioceseName.trim() || "DIOCÈSE DE GOMA";
       const coverPage =
-        '<section class="livret-page cover" style="--pen:' + ink + '">' +
+        '<section class="livret-page cover" style="--pen:' + ink + ';--paper:' + paper + '">' +
           '<div class="v">' + escapeHtml(faithfulRecord.prenom + " " + faithfulRecord.nom) + '</div>' +
           '<div class="cover-title">' + escapeHtml(diocese).replace(/\s+/g,"<br>") + '</div>' +
           '<div class="v">LIVRET DU FIDÈLE</div>' +
@@ -860,7 +859,7 @@ export async function mountFaithfulProfile(
         '</section>';
 
       const identityPage =
-        '<section class="livret-page" style="--pen:' + ink + '">' +
+        '<section class="livret-page" style="--pen:' + ink + ';--paper:' + paper + '">' +
           '<h3 style="text-align:center">IDENTITAS</h3>' +
           L("Nomen",faithfulRecord.prenom) + L("Familia",faithfulRecord.nom) +
           L("Pater",faithfulRecord.nom_pere) + L("Mater",faithfulRecord.nom_mere) +
@@ -890,7 +889,7 @@ export async function mountFaithfulProfile(
         return '<div class="marriage-slot"><h3>' + title + '</h3>' + body + '</div>';
       };
       const marriagePage =
-        '<section class="livret-page" style="--pen:' + ink + '">' +
+        '<section class="livret-page" style="--pen:' + ink + ';--paper:' + paper + '">' +
           '<h3 style="text-align:center">MATRIMONIUM contraxit</h3>' +
           marriageSlot("ante_baptismum","Ante baptismum cum",(item) =>
             L("Ante baptismum cum",spouseNameFor(item)) +
@@ -936,7 +935,7 @@ export async function mountFaithfulProfile(
           '</div>';
       }).join("");
       const childrenPage =
-        '<section class="livret-page" style="--pen:' + ink + '">' +
+        '<section class="livret-page" style="--pen:' + ink + ';--paper:' + paper + '">' +
           '<h3 style="text-align:center;font-size:1.3em;letter-spacing:.12em">LIBERI</h3>' +
           '<div class="child-list">' + childItems + '</div>' +
           '<div class="livret-foot">' + children.length + ' enfant(s) enregistré(s)</div>' +
@@ -961,7 +960,7 @@ export async function mountFaithfulProfile(
             '<div>' + escapeHtml(amount + " " + currency) + '</div>' +
             '<div>' + (signature?.signee ? "✓ visé" : "") + '</div>';
         }).join("");
-        return '<section class="livret-page" style="--pen:' + ink + '">' +
+        return '<section class="livret-page" style="--pen:' + ink + ';--paper:' + paper + '">' +
           '<div class="dg">' +
             '<div class="h">Année</div><div class="h">Dîme</div><div class="h">Pâques</div>' +
             cells +
