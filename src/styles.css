@@ -818,8 +818,8 @@ html[data-theme="dark"] .border-amber-200 { border-color: #73552e !important; }
 html[data-theme="dark"] .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
   border-color: #20364d !important;
 }
-html[data-theme="dark"] .hover\\:bg-slate-50:hover { background-color: #14283d !important; }
-html[data-theme="dark"] .hover\\:bg-emerald-50:hover { background-color: #123b39 !important; }
+html[data-theme="dark"] [class~="hover:bg-slate-50"]:hover { background-color: #14283d !important; }
+html[data-theme="dark"] [class~="hover:bg-emerald-50"]:hover { background-color: #123b39 !important; }
 html[data-theme="dark"] .from-rose-50,
 html[data-theme="dark"] .via-white,
 html[data-theme="dark"] .to-pink-50 { --tw-gradient-from: #10243a !important; --tw-gradient-to: #10243a !important; }
