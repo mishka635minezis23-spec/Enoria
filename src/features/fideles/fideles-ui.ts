@@ -147,7 +147,11 @@ export function mountFaithfulList(container: HTMLElement, context: UserContext, 
         .order("prenom", { ascending: true })
         .range(from, from + PAGE_SIZE - 1);
 
-      if (term) query = query.or(`prenom.ilike.%${term}%,nom.ilike.%${term}%`);
+      if (term) {
+        const tokens = term.split(/\\s+/).filter(Boolean);
+        const expression = tokens.map((part) => `prenom.ilike.%${part}%,nom.ilike.%${part}%`).join(",");
+        query = query.or(expression);
+      }
       if (current.get("sexe")) query = query.eq("sexe", current.get("sexe")!);
       const selectedStatus = current.get("statut");
       if (selectedStatus === "vivant" || selectedStatus === "decede") query = query.eq("statut", selectedStatus);
