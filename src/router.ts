@@ -49,11 +49,11 @@ export function updateFaithfulListQuery(params: URLSearchParams): void {
   window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
 }
 
-export type FaithfulProfileTab = "general" | "sacrements" | "famille" | "historique" | "documents";
+export type FaithfulProfileTab = "general" | "sacrements" | "dimes" | "famille" | "historique" | "documents";
 
 export function getFaithfulInitialTab(): FaithfulProfileTab {
   const tab = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("tab");
-  return tab === "sacrements" || tab === "famille" || tab === "historique" || tab === "documents" ? tab : "general";
+  return tab === "sacrements" || tab === "dimes" || tab === "famille" || tab === "historique" || tab === "documents" ? tab : "general";
 }
 
 export function navigateToFaithful(id: string, tab: FaithfulProfileTab = "general"): void {
