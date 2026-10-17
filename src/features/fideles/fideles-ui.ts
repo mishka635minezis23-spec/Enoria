@@ -306,7 +306,7 @@ function mountFaithfulCreateWizard(
       '<div class="grid gap-3 sm:grid-cols-2"><label class="' + labelClass + '">Année pastorale<select name="' + prefix + '-year" required class="' + selectClass + '">' + years + '</select></label>' +
       '<label class="' + labelClass + '">Communauté de célébration<select name="' + prefix + '-community" required class="' + selectClass + '">' + communities + '</select></label></div>' +
       '<div><p class="mb-2 text-xs font-semibold text-slate-600">Date</p>' + partialDateFields(prefix) + '</div>' +
-      '<div class="grid gap-3 sm:grid-cols-2"><label class="' + labelClass + '">Lieu<input name="' + prefix + '-lieu" maxlength="160"  + ' class="' + inputClass + '" /></label>' +
+      '<div class="grid gap-3 sm:grid-cols-2"><label class="' + labelClass + '">Lieu<input name="' + prefix + '-lieu" maxlength="160" class="' + inputClass + '" /></label>' +
       '<label class="' + labelClass + '">Ministre<input name="' + prefix + '-ministre" maxlength="160" class="' + inputClass + '" /></label>' +
       '<label class="' + labelClass + '">N° d’acte<input name="' + prefix + '-acte" maxlength="80" required class="' + inputClass + '" /></label>' +
       '<label class="' + labelClass + '">Page du registre<input name="' + prefix + '-page" maxlength="80" required class="' + inputClass + '" /></label>' +
@@ -408,7 +408,7 @@ function mountFaithfulCreateWizard(
       const datePrefixes = ["new-birth","new-death","new-bapteme","new-eucharistie","new-confirmation","new-marriage","new-spouse-baptism","new-marriage-death"];
       for (const prefix of datePrefixes) {
         const precision = form.querySelector<HTMLSelectElement>("#" + prefix + "-precision");
-        if (precision && prefix !== "new-bapteme") precision.value = "inconnue";
+        if (precision) precision.value = "inconnue";
         bindPartialDate(form, prefix);
       }
       const deathFields = root.querySelector<HTMLFieldSetElement>("#new-death-fields")!;
