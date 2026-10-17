@@ -62,10 +62,12 @@ input, select, textarea {
 ::selection { background: var(--enoria-primary-soft); color: var(--enoria-primary); }
 
 /* Transition douce des anciennes classes emerald vers la palette bleue Enoria. */
-:is([class~="text-emerald-700"],[class~="text-emerald-800"],[class~="text-emerald-900"]) { color: var(--enoria-primary) !important; }
-:is([class~="text-emerald-600"],[class~="text-emerald-500"]) { color: var(--enoria-secondary) !important; }
-:is([class~="bg-emerald-50"],[class~="bg-emerald-100"]) { background-color: var(--enoria-primary-soft) !important; }
-:is([class~="border-emerald-200"],[class~="border-emerald-300"]) { border-color: color-mix(in srgb, var(--enoria-primary) 18%, white) !important; }
+:is([class~="text-emerald-700"],[class~="text-emerald-800"],[class~="text-emerald-900"],[class~="text-emerald-600"]) { color: var(--enoria-primary) !important; }
+:is([class~="text-emerald-500"],[class~="text-emerald-400"]) { color: var(--enoria-secondary) !important; }
+:is([class~="bg-emerald-50"],[class~="bg-emerald-100"],[class~="bg-emerald-200"]) { background-color: var(--enoria-primary-soft) !important; }
+:is([class~="bg-emerald-600"],[class~="bg-emerald-700"],[class~="bg-emerald-800"]) { background-color: var(--enoria-primary) !important; }
+:is([class~="hover\\:bg-emerald-700"]:hover,[class~="hover\\:bg-emerald-800"]:hover) { background-color: color-mix(in srgb, var(--enoria-primary) 84%, black) !important; }
+:is([class~="border-emerald-100"],[class~="border-emerald-200"],[class~="border-emerald-300"]) { border-color: color-mix(in srgb, var(--enoria-primary) 18%, white) !important; }
 :is([class~="focus:border-emerald-700"]:focus) { border-color: var(--enoria-primary) !important; }
 :is([class~="focus:ring-emerald-100"]:focus) { --tw-ring-color: var(--enoria-primary-soft) !important; }
 @media (max-width: 767px) {
