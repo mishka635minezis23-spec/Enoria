@@ -53,6 +53,7 @@ export function mountFaithfulList(container: HTMLElement, context: UserContext, 
   const rowsNode = container.querySelector<HTMLElement>("#faithful-rows");
   const feedback = container.querySelector<HTMLElement>("#faithful-feedback");
   const countNode = container.querySelector<HTMLElement>("#faithful-count");
+  const suggestionsNode = container.querySelector<HTMLElement>("#faithful-search-suggestions");
   const pageNode = container.querySelector<HTMLElement>("#faithful-page");
   const previous = container.querySelector<HTMLButtonElement>("#faithful-prev");
   const next = container.querySelector<HTMLButtonElement>("#faithful-next");
@@ -234,8 +235,41 @@ export function mountFaithfulList(container: HTMLElement, context: UserContext, 
     writeListParams(current);
     void loadRows();
   });
+  let suggestionSequence = 0;
+  let suggestionTimer: number | undefined;
+  async function loadFaithfulSuggestions(): Promise<void> {
+    if (!suggestionsNode) return;
+    const term = safeSearchTerm(searchEl.value);
+    const sequence = ++suggestionSequence;
+    if (term.length < 2) { suggestionsNode.classList.add("hidden"); suggestionsNode.innerHTML = ""; return; }
+    const tokens = term.split(/\\s+/).filter(Boolean);
+    const expression = tokens.map((part) => `prenom.ilike.%${part}%,nom.ilike.%${part}%`).join(",");
+    const result = await getSupabaseClient().from("fideles").select("id,prenom,nom").or(expression).order("nom").limit(8);
+    if (sequence !== suggestionSequence) return;
+    if (result.error) { suggestionsNode.classList.add("hidden"); return; }
+    suggestionsNode.innerHTML = (result.data ?? []).map((item) =>
+      `<button type="button" data-suggest-fidele="${escapeHtml(item.id)}" data-suggest-name="${escapeHtml(item.prenom + " " + item.nom)}" class="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-emerald-50">${escapeHtml(item.prenom)} ${escapeHtml(item.nom)}</button>`
+    ).join("") || '<p class="px-3 py-2 text-xs text-slate-400">Aucune proposition.</p>';
+    suggestionsNode.classList.remove("hidden");
+  }
+  searchEl.addEventListener("input", () => {
+    if (suggestionTimer !== undefined) window.clearTimeout(suggestionTimer);
+    suggestionTimer = window.setTimeout(() => void loadFaithfulSuggestions(), 180);
+  });
+  searchEl.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") suggestionsNode?.classList.add("hidden");
+  });
   container.addEventListener("click", (event) => {
-    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-open-fidele]");
+    const target = event.target as HTMLElement;
+    const suggestion = target.closest<HTMLButtonElement>("[data-suggest-fidele]");
+    if (suggestion) {
+      searchEl.value = suggestion.dataset.suggestName ?? "";
+      suggestionsNode?.classList.add("hidden");
+      persistFilters(true);
+      void loadRows();
+      return;
+    }
+    const button = target.closest<HTMLButtonElement>("[data-open-fidele]");
     if (button?.dataset.openFidele) navigateToFaithful(button.dataset.openFidele);
   });
 
@@ -323,14 +357,17 @@ function mountFaithfulCreateWizard(
     const originalLabel = addButton.textContent;
     addButton.textContent = "Préparation…";
     try {
-      const [yearsResult, communitiesResult] = await Promise.all([
+      const [yearsResult, communitiesResult, quartiersResult] = await Promise.all([
         db.from("annees_pastorales").select("id,libelle,date_debut,active").eq("paroisse_id", parishId).order("date_debut", { ascending: false }),
-        db.from("communautes").select("id,nom,active").eq("paroisse_id", parishId).eq("active", true).order("nom")
+        db.from("communautes").select("id,nom,active,quartier_id").eq("paroisse_id", parishId).eq("active", true).order("nom"),
+        db.from("quartiers").select("id,nom").eq("paroisse_id", parishId).order("nom")
       ]);
       if (yearsResult.error) throw yearsResult.error;
       if (communitiesResult.error) throw communitiesResult.error;
+      if (quartiersResult.error) throw quartiersResult.error;
       const years = yearsResult.data ?? [];
       const communities = communitiesResult.data ?? [];
+      const quartiers = quartiersResult.data ?? [];
       if (!years.length) throw new Error("Crée d’abord une année pastorale dans Paramètres avant d’enregistrer un fidèle.");
       if (!communities.length) throw new Error("Aucune communauté active n’est disponible pour cette paroisse.");
       const yearOptions = years.map((item) => '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.libelle) + '</option>').join("");
@@ -343,7 +380,8 @@ function mountFaithfulCreateWizard(
         '<section data-wizard-step="1" class="space-y-4"><div class="rounded-xl border border-slate-100 p-4"><h3 class="font-semibold text-slate-800">Identité et appartenance</h3><div class="mt-3 grid gap-3 sm:grid-cols-2">' +
         '<label class="' + labelClass + '">Prénom *<input name="prenom" required maxlength="100" class="' + inputClass + '" /></label><label class="' + labelClass + '">Nom *<input name="nom" required maxlength="100" class="' + inputClass + '" /></label>' +
         '<label class="' + labelClass + '">Sexe *<select name="sexe" required class="' + selectClass + '"><option value="">Choisir…</option><option value="masculin">Masculin</option><option value="feminin">Féminin</option></select></label>' +
-        '<label class="' + labelClass + '">Communauté actuelle *<select name="communaute_id" required class="' + selectClass + '"><option value="">Choisir…</option>' + communityOptions + '</select></label>' +
+        '<label class="' + labelClass + '">Quartier *<select name="quartier_id" required class="' + selectClass + '"><option value="">Choisir un quartier…</option>' + quartiers.map((item) => '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.nom) + '</option>').join("") + '</select></label>' +
+        '<label class="' + labelClass + '">Communauté actuelle *<select name="communaute_id" required class="' + selectClass + '"><option value="">Choisir une communauté…</option>' + communityOptions + '</select></label>' +
         '<label class="' + labelClass + '">Membre depuis<input name="communaute_depuis" type="date" class="' + inputClass + '" /></label><label class="' + labelClass + '">Lieu de naissance<input name="lieu_naissance" maxlength="160" class="' + inputClass + '" /></label></div>' +
         '<div class="mt-4"><p class="mb-2 text-xs font-semibold text-slate-600">Date de naissance</p>' + partialDateFields("new-birth") + '</div></div>' +
         '<div class="rounded-xl border border-slate-100 p-4"><h3 class="font-semibold text-slate-800">Parents</h3><div class="mt-3 grid gap-3 sm:grid-cols-2"><label class="' + labelClass + '">Nom du père<input name="nom_pere" maxlength="160" class="' + inputClass + '" /></label><label class="' + labelClass + '">Nom de la mère<input name="nom_mere" maxlength="160" class="' + inputClass + '" /></label></div></div>' +
@@ -567,7 +605,26 @@ function mountFaithfulCreateWizard(
       });
 
       const currentCommunity = form.querySelector<HTMLSelectElement>('select[name="communaute_id"]')!;
-      currentCommunity.value = communities[0]?.id ?? "";
+      const currentQuartier = form.querySelector<HTMLSelectElement>('select[name="quartier_id"]')!;
+      const syncWizardCommunities = (): void => {
+        const filtered = communities.filter((item) => item.quartier_id === currentQuartier.value);
+        currentCommunity.innerHTML = '<option value="">Choisir une communauté…</option>' +
+          filtered.map((item) => '<option value="' + escapeHtml(item.id) + '">' + escapeHtml(item.nom) + '</option>').join("");
+        currentCommunity.value = filtered[0]?.id ?? "";
+        for (const prefix of ["new-bapteme","new-eucharistie","new-confirmation","new-marriage"]) {
+          const select = form.querySelector<HTMLSelectElement>('select[name="' + prefix + '-community"]');
+          if (select) select.value = currentCommunity.value;
+        }
+      };
+      currentQuartier.value = communities[0]?.quartier_id ?? "";
+      syncWizardCommunities();
+      currentQuartier.addEventListener("change", syncWizardCommunities);
+      currentCommunity.addEventListener("change", () => {
+        for (const prefix of ["new-bapteme","new-eucharistie","new-confirmation","new-marriage"]) {
+          const select = form.querySelector<HTMLSelectElement>('select[name="' + prefix + '-community"]');
+          if (select) select.value = currentCommunity.value;
+        }
+      });
       for (const prefix of ["new-bapteme","new-eucharistie","new-confirmation","new-marriage"]) {
         const communitySelect = form.querySelector<HTMLSelectElement>('select[name="' + prefix + '-community"]');
         if (communitySelect) communitySelect.value = currentCommunity.value;
