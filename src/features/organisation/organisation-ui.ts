@@ -22,12 +22,14 @@ export async function mountOrganisation(container: HTMLElement, context: UserCon
   const feedback = container.querySelector<HTMLElement>("#organisation-feedback");
   const addQuartierButton = container.querySelector<HTMLButtonElement>("#organisation-add-quartier");
   if (!list || !feedback) return;
+  const listEl: HTMLElement = list;
+  const feedbackEl: HTMLElement = feedback;
 
   const canWrite = canManageOrganization(context.roles);
   const adminAssignment = context.assignments.find((item) => item.role === "cure" || item.role === "secretaire")
     ?? context.assignments[0];
   if (!adminAssignment) {
-    showFeedback(feedback, "Aucune affectation paroissiale active n'est associée à ce compte.", "error");
+    showFeedback(feedbackEl, "Aucune affectation paroissiale active n'est associée à ce compte.", "error");
     return;
   }
   const parishId = adminAssignment.paroisse_id;
@@ -42,7 +44,7 @@ export async function mountOrganisation(container: HTMLElement, context: UserCon
   }
 
   async function loadOrganisation(): Promise<void> {
-    list.innerHTML = '<div class="page-card p-6 text-sm text-slate-500">Chargement des quartiers…</div>';
+    listEl.innerHTML = '<div class="page-card p-6 text-sm text-slate-500">Chargement des quartiers…</div>';
     const [quartiers, communities] = await Promise.all([
       db.from("quartiers").select("id,nom").eq("paroisse_id", parishId).order("nom"),
       db.from("communautes").select("id,nom,quartier_id,active").eq("paroisse_id", parishId).order("nom")
@@ -67,42 +69,42 @@ export async function mountOrganisation(container: HTMLElement, context: UserCon
           <ul class="px-5 pb-2">${children}</ul>
         </article>`;
     }).join("");
-    list.innerHTML = rows || '<div class="page-card p-8 text-center text-sm text-slate-400">Aucun quartier n’est enregistré. Utilise « Ajouter un quartier » pour commencer.</div>';
+    listEl.innerHTML = rows || '<div class="page-card p-8 text-center text-sm text-slate-400">Aucun quartier n’est enregistré. Utilise « Ajouter un quartier » pour commencer.</div>';
   }
 
   async function refresh(): Promise<void> {
     try {
       await loadOrganisation();
     } catch (error) {
-      list.innerHTML = '<div class="page-card p-6 text-sm text-rose-700">Impossible de charger l’organisation paroissiale.</div>';
-      showFeedback(feedback, error instanceof Error ? error.message : "Erreur de lecture de l'organisation paroissiale.", "error");
+      listEl.innerHTML = '<div class="page-card p-6 text-sm text-rose-700">Impossible de charger l’organisation paroissiale.</div>';
+      showFeedback(feedbackEl, error instanceof Error ? error.message : "Erreur de lecture de l'organisation paroissiale.", "error");
     }
   }
 
   async function createQuartier(): Promise<void> {
     if (!canWrite) {
-      showFeedback(feedback, "La création d'un quartier est réservée au curé et au secrétaire.", "error");
+      showFeedback(feedbackEl, "La création d'un quartier est réservée au curé et au secrétaire.", "error");
       return;
     }
     const rawName = window.prompt("Nom du nouveau quartier :");
     if (rawName === null) return;
     const nom = rawName.trim();
     if (!nom) {
-      showFeedback(feedback, "Saisis le nom du quartier avant de l'enregistrer.", "error");
+      showFeedback(feedbackEl, "Saisis le nom du quartier avant de l'enregistrer.", "error");
       return;
     }
     if (nom.length > 120) {
-      showFeedback(feedback, "Le nom du quartier ne peut pas dépasser 120 caractères.", "error");
+      showFeedback(feedbackEl, "Le nom du quartier ne peut pas dépasser 120 caractères.", "error");
       return;
     }
     if (addQuartierButton) addQuartierButton.disabled = true;
     try {
       const { error } = await db.from("quartiers").insert({ paroisse_id: parishId, nom });
       if (error) throw error;
-      showFeedback(feedback, `Le quartier « ${nom} » a été créé.`, "success");
+      showFeedback(feedbackEl, `Le quartier « ${nom} » a été créé.`, "success");
       await loadOrganisation();
     } catch (error) {
-      showFeedback(feedback, error instanceof Error ? error.message : "Échec de la création du quartier.", "error");
+      showFeedback(feedbackEl, error instanceof Error ? error.message : "Échec de la création du quartier.", "error");
     } finally {
       if (addQuartierButton) addQuartierButton.disabled = !canWrite;
     }
@@ -110,18 +112,18 @@ export async function mountOrganisation(container: HTMLElement, context: UserCon
 
   async function createCommunity(quartierId: string): Promise<void> {
     if (!canWrite) {
-      showFeedback(feedback, "La création d'une communauté est réservée au curé et au secrétaire.", "error");
+      showFeedback(feedbackEl, "La création d'une communauté est réservée au curé et au secrétaire.", "error");
       return;
     }
     const rawName = window.prompt("Nom de la nouvelle communauté :");
     if (rawName === null) return;
     const nom = rawName.trim();
     if (!nom) {
-      showFeedback(feedback, "Saisis le nom de la communauté avant de l'enregistrer.", "error");
+      showFeedback(feedbackEl, "Saisis le nom de la communauté avant de l'enregistrer.", "error");
       return;
     }
     if (nom.length > 120) {
-      showFeedback(feedback, "Le nom de la communauté ne peut pas dépasser 120 caractères.", "error");
+      showFeedback(feedbackEl, "Le nom de la communauté ne peut pas dépasser 120 caractères.", "error");
       return;
     }
     const button = container.querySelector<HTMLButtonElement>(`[data-add-community="${CSS.escape(quartierId)}"]`);
@@ -134,10 +136,10 @@ export async function mountOrganisation(container: HTMLElement, context: UserCon
         active: true
       });
       if (error) throw error;
-      showFeedback(feedback, `La communauté « ${nom} » a été créée.`, "success");
+      showFeedback(feedbackEl, `La communauté « ${nom} » a été créée.`, "success");
       await loadOrganisation();
     } catch (error) {
-      showFeedback(feedback, error instanceof Error ? error.message : "Échec de la création de la communauté.", "error");
+      showFeedback(feedbackEl, error instanceof Error ? error.message : "Échec de la création de la communauté.", "error");
     } finally {
       const currentButton = container.querySelector<HTMLButtonElement>(`[data-add-community="${CSS.escape(quartierId)}"]`);
       if (currentButton) currentButton.disabled = !canWrite;
@@ -145,7 +147,7 @@ export async function mountOrganisation(container: HTMLElement, context: UserCon
   }
 
   addQuartierButton?.addEventListener("click", () => void createQuartier());
-  list.addEventListener("click", (event) => {
+  listEl.addEventListener("click", (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-add-community]");
     if (button?.dataset.addCommunity) void createCommunity(button.dataset.addCommunity);
   });
