@@ -253,10 +253,6 @@ const CARD_COLORS: { key: CardColorKey; label: string; gradient: string; swatch:
   { key: "or", label: "Or doux", gradient: "linear-gradient(135deg,#fffbeb 0%,#fde68a 52%,#fffdf4 100%)", swatch: "linear-gradient(135deg,#fffbeb,#fcd34d)" }
 ];
 
-function cardGradient(value: string | null | undefined): string {
-  return CARD_COLORS.find((item) => item.key === value)?.gradient ?? CARD_COLORS[0].gradient;
-}
-
 function renderCardColorChoices(selected: string, inputName: string): string {
   return CARD_COLORS.map((item) => {
     const active = item.key === selected;
@@ -268,12 +264,6 @@ function renderCardColorChoices(selected: string, inputName: string): string {
       item.swatch + '"></span><span class="text-[10px] font-medium leading-tight text-slate-600">' +
       escapeHtml(item.label) + '</span></label>';
   }).join("");
-}
-
-function bookletLine(label: string, value: unknown): string {
-  return '<div class="my-1 flex min-w-0 items-baseline gap-1.5 text-[11px] leading-tight text-slate-800"><span class="shrink-0">' +
-    escapeHtml(label) + '</span><span class="min-h-5 min-w-0 flex-1 border-b border-dotted border-slate-500 px-1 font-serif italic text-indigo-800 [overflow-wrap:anywhere]">' +
-    escapeHtml(value || "") + '</span></div>';
 }
 
 function mountFaithfulCreateWizard(
@@ -683,24 +673,63 @@ export async function mountFaithfulProfile(
   container.querySelector<HTMLButtonElement>("#faithful-back")?.addEventListener("click", navigateBackFromFaithful);
   const livretModal = container.querySelector<HTMLElement>("#livret-modal");
   const livretStage = container.querySelector<HTMLElement>("#livret-3d-container");
+  const livretNav = container.querySelector<HTMLElement>("#livret-nav");
   let currentBookletMarkup = "";
+  let currentLivretView: "1" | "2" | "all" = "1";
+  const setLivretView = (view: "1" | "2" | "all"): void => {
+    currentLivretView = view;
+    if (livretStage) livretStage.dataset.v = view;
+    livretNav?.querySelectorAll<HTMLButtonElement>("[data-livret-view]").forEach((button) => {
+      const active = button.dataset.livretView === view;
+      button.classList.toggle("on", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  };
   const closeLivret = (): void => {
     livretModal?.classList.add("hidden");
     if (livretStage) livretStage.innerHTML = "";
     document.body.classList.remove("overflow-hidden");
+    setLivretView("1");
   };
   const openLivret = (): void => {
     if (!livretModal || !livretStage) return;
     livretStage.innerHTML = currentBookletMarkup ||
-      '<p class="rounded-lg bg-white p-8 text-sm text-slate-500">Le livret n’est pas encore disponible.</p>';
+      '<div class="spread"><section class="livret-page">Le livret n’est pas encore disponible.</section></div>';
+    setLivretView("1");
     livretModal.classList.remove("hidden");
     document.body.classList.add("overflow-hidden");
   };
+  const handleLivretKeydown = (event: KeyboardEvent): void => {
+    if (!livretModal || livretModal.classList.contains("hidden")) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeLivret();
+      return;
+    }
+    if (event.key === "ArrowRight" && currentLivretView === "1") {
+      event.preventDefault();
+      setLivretView("2");
+    } else if (event.key === "ArrowLeft" && currentLivretView === "2") {
+      event.preventDefault();
+      setLivretView("1");
+    }
+  };
+  livretNav?.querySelectorAll<HTMLButtonElement>("[data-livret-view]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const view = button.dataset.livretView;
+      if (view === "1" || view === "2" || view === "all") setLivretView(view);
+    });
+  });
+  document.addEventListener("keydown", handleLivretKeydown);
   container.querySelector<HTMLButtonElement>("#close-livret-3d")?.addEventListener("click", closeLivret);
   container.querySelector<HTMLButtonElement>("#open-livret-3d")?.addEventListener("click", openLivret);
   livretModal?.addEventListener("click", (event) => {
     if (event.target === livretModal) closeLivret();
   });
+  const disposeProfile = (): void => {
+    closeLivret();
+    document.removeEventListener("keydown", handleLivretKeydown);
+  };
   const nameNode = container.querySelector<HTMLElement>("#profile-name");
   const subtitleNode = container.querySelector<HTMLElement>("#profile-subtitle");
   const contentNode = container.querySelector<HTMLElement>("#profile-content");
@@ -751,12 +780,28 @@ export async function mountFaithfulProfile(
       const sacraments = sacramentResult.data ?? [];
       const marriages = marriageResult.data ?? [];
       const children = childrenResult.data ?? [];
+      let dimes: Tables<"dimes">[] = [];
+      let signatures: Tables<"signatures">[] = [];
+      let pastoralYears: Tables<"annees_pastorales">[] = [];
+      if (canManageFaithful) {
+        const [dimesResult, signaturesResult, yearsResult] = await Promise.all([
+          supabase.from("dimes").select("*").eq("fidele_id", faithfulRecord.id),
+          supabase.from("signatures").select("*").eq("fidele_id", faithfulRecord.id),
+          supabase.from("annees_pastorales").select("*").eq("paroisse_id", faithfulRecord.paroisse_id).order("date_debut", { ascending: true })
+        ]);
+        if (sequence !== tabSequence) return;
+        if (dimesResult.error) throw dimesResult.error;
+        if (signaturesResult.error) throw signaturesResult.error;
+        if (yearsResult.error) throw yearsResult.error;
+        dimes = dimesResult.data ?? [];
+        signatures = signaturesResult.data ?? [];
+        pastoralYears = yearsResult.data ?? [];
+      }
       const sacramentByType = new Map(sacraments.map((item) => [item.type, item]));
       const baptism = sacramentByType.get("bapteme");
       const eucharist = sacramentByType.get("eucharistie");
       const confirmation = sacramentByType.get("confirmation");
-      const dateFor = (item: {jour:number|null;mois:number|null;annee:number|null;precision:Precision}|undefined): string =>
-        !item || item.precision === "inconnue" ? "" : formatPartialDate(item.jour,item.mois,item.annee,item.precision);
+      const birth = faithfulRecord.naissance_precision === "inconnue" ? "" : formatPartialDate(faithfulRecord.naissance_jour,faithfulRecord.naissance_mois,faithfulRecord.naissance_annee,faithfulRecord.naissance_precision);
       const paletteHtml = canManageFaithful ? '<button type="button" id="faithful-meta-toggle" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Modifier statut / couleur</button>' : '';
       const relatedIds = [...new Set(marriages.flatMap((item) => [
         item.fidele_id !== faithfulRecord.id ? item.fidele_id : null,
@@ -767,85 +812,168 @@ export async function mountFaithfulProfile(
         : { data: [], error: null };
       if (relatedResult.error) throw relatedResult.error;
       const relatedNames = new Map((relatedResult.data ?? []).map((item) => [item.id, item.prenom + " " + item.nom]));
-      const marriageLabels: Record<string,string> = {
-        ante_baptismum:"Avant le baptême", post_baptismum:"Mariage célébré",
-        obiit_conjux:"Décès du conjoint", novas_nuptias:"Nouvelles noces"
-      };
       const spouseNameFor = (item: typeof marriages[number]): string => {
         if (item.fidele_id !== faithfulRecord.id) return relatedNames.get(item.fidele_id) ?? item.conjoint_nom ?? "Conjoint lié";
         if (item.conjoint_fidele_id) return relatedNames.get(item.conjoint_fidele_id) ?? item.conjoint_nom ?? "Dossier lié";
         return item.conjoint_nom ?? "";
       };
-      const dateForMarriage = (item: {jour:number|null;mois:number|null;annee:number|null;precision:Precision}): string =>
-        item.precision === "inconnue" ? "" : formatPartialDate(item.jour,item.mois,item.annee,item.precision);
-      const marriageHtml = marriages.length
-        ? marriages.map((item) => {
-            const spouseBaptism = item.conjoint_bapteme_precision === "inconnue" ? "" : formatPartialDate(item.conjoint_bapteme_jour,item.conjoint_bapteme_mois,item.conjoint_bapteme_annee,item.conjoint_bapteme_precision);
-            const spouseDeath = item.deces_conjoint_precision === "inconnue" ? "" : formatPartialDate(item.deces_conjoint_jour,item.deces_conjoint_mois,item.deces_conjoint_annee,item.deces_conjoint_precision);
-            const ownerHint = item.fidele_id !== faithfulRecord.id ? "Enregistré depuis le dossier lié du conjoint" : "";
-            return '<article class="mb-2"><h3 class="text-[11px] font-bold">' + escapeHtml(marriageLabels[item.type] ?? item.type) + '</h3>' +
-              bookletLine("cum",spouseNameFor(item)) + bookletLine("in",item.lieu) + bookletLine("die",dateForMarriage(item)) +
-              bookletLine("n°",item.numero_acte) + bookletLine("Page",item.page_registre) +
-              bookletLine("Bapt. conjoint",item.conjoint_lieu_bapteme) + bookletLine("date bapt.",spouseBaptism) +
-              (item.type === "obiit_conjux" ? bookletLine("Décès",spouseDeath) : "") +
-              bookletLine("Ministre",item.ministre) + bookletLine("Visa",item.visa) +
-              (ownerHint ? '<p class="mt-1 text-[9px] italic text-slate-500">' + escapeHtml(ownerHint) + '</p>' : "") + '</article>';
-          }).join('<hr class="my-1 border-0 border-t-2 border-black/70" />')
-        : '<p class="mt-2 text-[10px] italic text-slate-500">Aucun événement matrimonial.</p>' + Array.from({length:2},() => bookletLine("in","")).join("");
-      const childSlots = Math.max(5,children.length);
-      const childrenHtml = Array.from({length:childSlots},(_,index) => {
-        const child = children[index];
-        if (!child) {
-          return '<div class="mb-1">' + bookletLine(String(index+1)+")","") + bookletLine("nat","") +
-            bookletLine("bapt. in","") + bookletLine("die","") + bookletLine("n°","") + '</div>';
-        }
-        const childBirth = child.naissance_precision === "inconnue" ? "" : formatPartialDate(child.naissance_jour,child.naissance_mois,child.naissance_annee,child.naissance_precision);
-        const childBaptism = child.bapteme_precision === "inconnue" ? "" : formatPartialDate(child.bapteme_jour,child.bapteme_mois,child.bapteme_annee,child.bapteme_precision);
-        return '<div class="mb-1">' + bookletLine(String(index+1)+")",child.prenom + " " + child.nom) +
-          bookletLine("nat",childBirth) + bookletLine("bapt. in",child.lieu_bapteme) +
-          bookletLine("die",childBaptism) + bookletLine("n°",child.numero_acte) + '</div>';
-      }).join("");
-      const death = faithfulRecord.deces_precision === "inconnue" ? "" : formatPartialDate(faithfulRecord.deces_jour,faithfulRecord.deces_mois,faithfulRecord.deces_annee,faithfulRecord.deces_precision);
-      const birth = faithfulRecord.naissance_precision === "inconnue" ? "" : formatPartialDate(faithfulRecord.naissance_jour,faithfulRecord.naissance_mois,faithfulRecord.naissance_annee,faithfulRecord.naissance_precision);
-      const bookletSacramentBlock = (title: string, item: typeof baptism): string => {
-        return '<hr class="my-1 border-0 border-t-2 border-black/70" /><h3 class="text-[11px] font-bold tracking-wide">' + title + '</h3>' +
-          bookletLine("in",item?.lieu) + bookletLine("die",dateFor(item)) + bookletLine("n°",item?.numero_acte) +
-          bookletLine("Page",item?.page_registre) + bookletLine("Suscepit",item?.parrain) +
-          bookletLine("Matrina",item?.marraine) + bookletLine("Ministre",item?.ministre) + bookletLine("Visa",item?.visa);
+      const livretDate = (value?: {jour:number|null;mois:number|null;annee:number|null;precision:Precision}|null): string => {
+        if (!value) return "";
+        if (value.precision === "inconnue") return "?";
+        const pad = (part: number | null): string => String(part ?? "").padStart(2,"0");
+        if (value.precision === "annee") return value.annee ? String(value.annee) : "";
+        if (value.precision === "mois") return value.annee && value.mois ? pad(value.mois) + "/" + value.annee : value.annee ? String(value.annee) : "";
+        return value.jour && value.mois && value.annee ? pad(value.jour) + "/" + pad(value.mois) + "/" + value.annee : value.annee ? String(value.annee) : "";
       };
-      const bookletCardHtml = `
-        <section class="livret-card-sheet mx-auto flex w-full max-w-[1123px] flex-col overflow-hidden border-2 border-black bg-white shadow-2xl" style="width:min(100%,1123px,calc((100dvh - 64px)*297/210));aspect-ratio:297/210;background:${cardGradient(faithfulRecord.carte_couleur)}">
-          <header class="shrink-0 border-b-2 border-black px-4 py-2 text-center sm:px-6">
-            <p class="text-[9px] font-bold uppercase tracking-[0.22em] text-slate-700">Paroisse · ${escapeHtml(getAppConfig().parishName)}</p>
-            <h2 class="mt-0.5 font-serif text-lg font-bold uppercase tracking-[0.18em] text-slate-950 sm:text-xl">Liber memorialis</h2>
-            <p class="mt-0.5 text-[9px] text-slate-700">Registre personnel · ${escapeHtml(faithfulRecord.prenom)} ${escapeHtml(faithfulRecord.nom)}</p>
-          </header>
-          <div class="grid min-h-0 flex-1 grid-cols-3 divide-x-2 divide-black overflow-hidden">
-            <section class="min-w-0 overflow-y-auto px-2 py-2 sm:px-4">
-              <h3 class="mb-1 text-center text-[11px] font-bold tracking-[0.18em]">IDENTITAS</h3>
-              ${bookletLine("Nomen",faithfulRecord.prenom)}${bookletLine("Familia",faithfulRecord.nom)}${bookletLine("Sexus",faithfulRecord.sexe === "masculin" ? "Masculin" : "Féminin")}${bookletLine("Pater",faithfulRecord.nom_pere)}${bookletLine("Mater",faithfulRecord.nom_mere)}${bookletLine("Nat. in",faithfulRecord.lieu_naissance)}${bookletLine("die",birth)}
-              <hr class="my-1 border-0 border-t-2 border-black/80" />
-              <h3 class="text-[11px] font-bold tracking-wide">BAPTISMUM</h3>
-              ${bookletLine("in",baptism?.lieu)}${bookletLine("die",dateFor(baptism))}${bookletLine("n°",baptism?.numero_acte)}${bookletLine("Page",baptism?.page_registre)}${bookletLine("Suscepit",baptism?.parrain)}${bookletLine("Matrina",baptism?.marraine)}${bookletLine("Ministre",baptism?.ministre)}${bookletLine("Visa",baptism?.visa)}
-              ${bookletSacramentBlock("EUCHARISTIA",eucharist)}
-              ${bookletSacramentBlock("CONFIRMATIO",confirmation)}
-            </section>
-            <section class="min-w-0 overflow-y-auto px-2 py-2 sm:px-4">
-              <h3 class="mb-1 text-center text-[11px] font-bold tracking-[0.18em]">MATRIMONIUM</h3>
-              ${marriageHtml}
-              <div class="mt-2 border-t-2 border-black pt-1">
-                ${bookletLine("Communitas",community?.nom)}${bookletLine("Quartier",quartierName)}${bookletLine("Depuis",faithfulRecord.communaute_depuis)}${bookletLine("Statut",faithfulRecord.statut === "decede" ? "Décédé" : "Vivant")}${faithfulRecord.statut === "decede" ? bookletLine("Décès",death) : ""}
-              </div>
-            </section>
-            <section class="min-w-0 overflow-y-auto px-2 py-2 sm:px-4">
-              <h3 class="mb-1 text-center text-[12px] font-bold tracking-[0.18em]">LIBERI</h3>
-              ${childrenHtml}
-              ${children.length > 5 ? '<p class="mt-1 border-t border-black/60 pt-1 text-[9px] italic text-slate-600">' + children.length + ' enfants inscrits · suite conservée</p>' : ""}
-            </section>
-          </div>
-          <footer class="shrink-0 border-t-2 border-black px-3 py-1 text-center text-[8px] text-slate-700">Enoria · Document de consultation · Les registres papier demeurent la référence officielle</footer>
-        </section>`;
-      currentBookletMarkup = bookletCardHtml;
+      const birthLivret = livretDate({jour:faithfulRecord.naissance_jour,mois:faithfulRecord.naissance_mois,annee:faithfulRecord.naissance_annee,precision:faithfulRecord.naissance_precision});
+      const deathLivret = livretDate({jour:faithfulRecord.deces_jour,mois:faithfulRecord.deces_mois,annee:faithfulRecord.deces_annee,precision:faithfulRecord.deces_precision});
+      const L = (label: string, value: unknown): string =>
+        '<div class="l"><span class="k">' + escapeHtml(label) + '</span><span class="v">' + escapeHtml(value ?? "") + '</span></div>';
+      const R = (first: string, second: string): string => '<div class="row2">' + first + second + '</div>';
+      const testor = (minister: unknown, visa?: unknown): string =>
+        L("Quod testor ego",minister) + (visa ? '<span class="stamp">' + escapeHtml(visa) + '</span>' : "");
+      const sacramentPageSection = (title: string, item: typeof baptism, sponsors = false): string => {
+        return '<hr><h3>' + title + '</h3>' +
+          L("in",item?.lieu) +
+          R(L("die",livretDate(item ? {jour:item.jour,mois:item.mois,annee:item.annee,precision:item.precision} : null)),L("n°",item?.numero_acte)) +
+          L("Page",item?.page_registre) +
+          (sponsors ? L("Suscepit",item?.parrain) + L("Matrina",item?.marraine) : "") +
+          testor(item?.ministre,item?.visa);
+      };
+
+      const config = getAppConfig();
+      const inkByColor: Record<string,string> = {
+        rose:"#9d174d", bleu:"#2b3fb0", lavande:"#6d28d9", sauge:"#276749", or:"#946200"
+      };
+      const ink = inkByColor[faithfulRecord.carte_couleur] ?? inkByColor.rose;
+      const diocese = config.dioceseName.trim() || "DIOCÈSE DE GOMA";
+      const coverPage =
+        '<section class="livret-page cover" style="--pen:' + ink + '">' +
+          '<div class="v">' + escapeHtml(faithfulRecord.prenom + " " + faithfulRecord.nom) + '</div>' +
+          '<div class="cover-title">' + escapeHtml(diocese).replace(/\s+/g,"<br>") + '</div>' +
+          '<div class="v">LIVRET DU FIDÈLE</div>' +
+          '<div class="cover-rdc">RÉPUBLIQUE DÉMOCRATIQUE<br>DU CONGO</div>' +
+          '<hr><div>Paroisse</div>' +
+          '<div class="cover-parish">' + escapeHtml(config.parishName) + '</div>' +
+          '<span class="stamp">REGISTRE PAROISSIAL</span>' +
+          '<div class="livret-foot">ENORIA · DOCUMENT DE CONSULTATION</div>' +
+        '</section>';
+
+      const identityPage =
+        '<section class="livret-page" style="--pen:' + ink + '">' +
+          '<h3 style="text-align:center">IDENTITAS</h3>' +
+          L("Nomen",faithfulRecord.prenom) + L("Familia",faithfulRecord.nom) +
+          L("Pater",faithfulRecord.nom_pere) + L("Mater",faithfulRecord.nom_mere) +
+          L("Quartier",quartierName) +
+          R(L("Nat. in",faithfulRecord.lieu_naissance),L("die",birthLivret)) +
+          R(L("Sexus",faithfulRecord.sexe === "masculin" ? "Masculin" : "Féminin"),L("Statut",faithfulRecord.statut === "decede" ? "Décédé" : "Vivant")) +
+          (faithfulRecord.statut === "decede" ? L("Obiit die",deathLivret) : "") +
+          '<hr><h3>BAPTISMUM</h3>' +
+          L("in",baptism?.lieu) +
+          R(L("die",livretDate(baptism ? {jour:baptism.jour,mois:baptism.mois,annee:baptism.annee,precision:baptism.precision} : null)),L("n°",baptism?.numero_acte)) +
+          R(L("Page",baptism?.page_registre),L("Suscepit",baptism?.parrain)) +
+          L("Matrina",baptism?.marraine) + testor(baptism?.ministre,baptism?.visa) +
+          sacramentPageSection("EUCHARISTIA",eucharist) +
+          sacramentPageSection("CONFIRMATIO",confirmation) +
+          '<div class="livret-foot">' + escapeHtml(config.parishName) + ' · ' + escapeHtml(community?.nom ?? "Communauté non renseignée") + '</div>' +
+        '</section>';
+
+      const marriageSlot = (
+        type: Database["public"]["Enums"]["type_evenement_matrimonial"],
+        title: string,
+        render: (item: typeof marriages[number]) => string
+      ): string => {
+        const items = marriages.filter((item) => item.type === type);
+        const body = items.length
+          ? items.map(render).join('<hr>')
+          : L(title,"") + R(L("die",""),L("n°","")) + L("Visa","");
+        return '<div class="marriage-slot"><h3>' + title + '</h3>' + body + '</div>';
+      };
+      const marriagePage =
+        '<section class="livret-page" style="--pen:' + ink + '">' +
+          '<h3 style="text-align:center">MATRIMONIUM contraxit</h3>' +
+          marriageSlot("ante_baptismum","Ante baptismum cum",(item) =>
+            L("Ante baptismum cum",spouseNameFor(item)) +
+            R(L("die",livretDate({jour:item.jour,mois:item.mois,annee:item.annee,precision:item.precision})),L("n°",item.numero_acte)) +
+            L("Page",item.page_registre) + testor(item.ministre,item.visa)
+          ) +
+          '<hr>' +
+          marriageSlot("post_baptismum","Post Baptismum in",(item) =>
+            L("Post Baptismum in",item.lieu) +
+            R(L("die",livretDate({jour:item.jour,mois:item.mois,annee:item.annee,precision:item.precision})),L("n°",item.numero_acte)) +
+            L("cum",spouseNameFor(item)) +
+            R(L("bapt. in",item.conjoint_lieu_bapteme),L("die",livretDate({jour:item.conjoint_bapteme_jour,mois:item.conjoint_bapteme_mois,annee:item.conjoint_bapteme_annee,precision:item.conjoint_bapteme_precision}))) +
+            L("Page",item.page_registre) + testor(item.ministre,item.visa)
+          ) +
+          '<hr>' +
+          marriageSlot("obiit_conjux","Obiit conjux",(item) =>
+            L("Obiit conjux",spouseNameFor(item)) +
+            R(L("die",livretDate({jour:item.deces_conjoint_jour,mois:item.deces_conjoint_mois,annee:item.deces_conjoint_annee,precision:item.deces_conjoint_precision})),L("n°",item.numero_acte)) +
+            L("Page",item.page_registre) + testor(item.ministre,item.visa)
+          ) +
+          '<hr>' +
+          marriageSlot("novas_nuptias","Novas nuptias iniit in",(item) =>
+            L("Novas nuptias iniit in",item.lieu) +
+            R(L("die",livretDate({jour:item.jour,mois:item.mois,annee:item.annee,precision:item.precision})),L("n°",item.numero_acte)) +
+            L("cum",spouseNameFor(item)) +
+            R(L("bapt. in",item.conjoint_lieu_bapteme),L("die",livretDate({jour:item.conjoint_bapteme_jour,mois:item.conjoint_bapteme_mois,annee:item.conjoint_bapteme_annee,precision:item.conjoint_bapteme_precision}))) +
+            L("Page",item.page_registre) + testor(item.ministre,item.visa)
+          ) +
+          '<div class="livret-foot">Les événements sont présentés dans l’ordre du registre matrimonial.</div>' +
+        '</section>';
+
+      const childSlots = Math.max(5,children.length);
+      const childItems = Array.from({length:childSlots},(_,index) => {
+        const child = children[index];
+        const childBirth = child
+          ? livretDate({jour:child.naissance_jour,mois:child.naissance_mois,annee:child.naissance_annee,precision:child.naissance_precision}) : "";
+        const childBaptism = child
+          ? livretDate({jour:child.bapteme_jour,mois:child.bapteme_mois,annee:child.bapteme_annee,precision:child.bapteme_precision}) : "";
+        return '<div class="child-item">' +
+          L(String(index+1) + ")",child ? child.prenom + " " + child.nom : "") +
+          R(L("nat",childBirth),L("bapt. in",child?.lieu_bapteme)) +
+          R(L("die",childBaptism),L("n°",child?.numero_acte)) +
+          '</div>';
+      }).join("");
+      const childrenPage =
+        '<section class="livret-page" style="--pen:' + ink + '">' +
+          '<h3 style="text-align:center;font-size:1.3em;letter-spacing:.12em">LIBERI</h3>' +
+          '<div class="child-list">' + childItems + '</div>' +
+          '<div class="livret-foot">' + children.length + ' enfant(s) enregistré(s)</div>' +
+        '</section>';
+
+      const pastoralYearMap = new Map(pastoralYears.map((year) => [year.id,year]));
+      const signatureMap = new Map(signatures.map((signature) => [signature.annee_pastorale_id,signature]));
+      const sortedDimes = [...dimes].sort((first,second) => {
+        const firstDate = pastoralYearMap.get(first.annee_pastorale_id)?.date_debut ?? "";
+        const secondDate = pastoralYearMap.get(second.annee_pastorale_id)?.date_debut ?? "";
+        return firstDate.localeCompare(secondDate);
+      });
+      const dimePage = (offset: number): string => {
+        const cells = Array.from({length:16},(_,index) => {
+          const item = sortedDimes[offset + index];
+          if (!item) return '<div></div><div></div><div></div>';
+          const year = pastoralYearMap.get(item.annee_pastorale_id);
+          const signature = signatureMap.get(item.annee_pastorale_id);
+          const amount = new Intl.NumberFormat(config.locale || "fr-CD",{maximumFractionDigits:2}).format(Number(item.montant));
+          const currency = item.devise === "USD" ? "$" : "FC";
+          return '<div>' + escapeHtml(year?.libelle ?? year?.date_debut ?? "—") + '</div>' +
+            '<div>' + escapeHtml(amount + " " + currency) + '</div>' +
+            '<div>' + (signature?.signee ? "✓ visé" : "") + '</div>';
+        }).join("");
+        return '<section class="livret-page" style="--pen:' + ink + '">' +
+          '<div class="dg">' +
+            '<div class="h">Année</div><div class="h">Dîme</div><div class="h">Pâques</div>' +
+            cells +
+          '</div>' +
+          (!canManageFaithful ? '<div class="livret-foot">Consultation des dîmes réservée au secrétariat.</div>' :
+            sortedDimes.length > 32 ? '<div class="livret-foot">Les lignes supplémentaires figurent dans l’onglet Dîmes.</div>' : '') +
+        '</section>';
+      };
+
+      currentBookletMarkup =
+        '<div class="spread" id="s1">' + coverPage + identityPage + marriagePage + '</div>' +
+        '<div class="spread" id="s2">' + childrenPage + dimePage(0) + dimePage(16) + '</div>';
       contentEl.innerHTML = `
         <div class="space-y-3">
           <section class="page-card p-4 sm:p-5">
@@ -862,7 +990,7 @@ export async function mountFaithfulProfile(
               <div class="rounded-lg bg-slate-50 p-2.5"><p class="text-[9px] font-semibold uppercase tracking-wide text-slate-500">Famille</p><p class="mt-0.5 text-xs font-medium text-slate-800">${children.length} enfant(s) · ${marriages.length} événement(s) matrimonial(aux)</p></div>
             </div>
             <button type="button" data-open-booklet class="mt-3 flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-3 text-left transition hover:border-emerald-400 hover:bg-emerald-50/40">
-              <span><span class="block text-sm font-semibold text-slate-900">Ouvrir le livret complet</span><span class="mt-0.5 block text-[11px] text-slate-500">Carte A4 paysage · 3 colonnes reliées · plein écran</span></span>
+              <span><span class="block text-sm font-semibold text-slate-900">Ouvrir le livret complet</span><span class="mt-0.5 block text-[11px] text-slate-500">Deux volets · trois pages côte à côte · sans défilement</span></span>
               <span class="grid h-11 w-24 shrink-0 grid-cols-3 overflow-hidden rounded border-2 border-black bg-rose-50 text-[7px] text-slate-500">
                 <span class="border-r-2 border-black p-1">IDENTITAS</span><span class="border-r-2 border-black p-1">MATR.</span><span class="p-1">LIBERI</span>
               </span>
@@ -1463,11 +1591,11 @@ export async function mountFaithfulProfile(
 
     tabs.forEach((button) => button.addEventListener("click", () => void renderTab(button.dataset.tab ?? "general")));
     void renderTab(getFaithfulInitialTab());
-    return closeLivret;
+    return disposeProfile;
   } catch (error) {
     nameEl.textContent = "Dossier indisponible";
     subtitleEl.textContent = "Les informations ne sont pas accessibles avec ce compte.";
     contentEl.innerHTML = `<section class="page-card p-5 text-sm text-rose-700">${escapeHtml(error instanceof Error ? error.message : "Impossible de charger le dossier.")}</section>`;
-    return closeLivret;
+    return disposeProfile;
   }
 }
