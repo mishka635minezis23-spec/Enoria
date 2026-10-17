@@ -529,6 +529,7 @@ export type Database = {
       }
       fideles: {
         Row: {
+          carte_couleur: string
           code_simulation: string | null
           communaute_depuis: string
           communaute_id: string
@@ -555,6 +556,7 @@ export type Database = {
           uuid_client: string | null
         }
         Insert: {
+          carte_couleur?: string
           code_simulation?: string | null
           communaute_depuis?: string
           communaute_id: string
@@ -581,6 +583,7 @@ export type Database = {
           uuid_client?: string | null
         }
         Update: {
+          carte_couleur?: string
           code_simulation?: string | null
           communaute_depuis?: string
           communaute_id?: string
@@ -1112,6 +1115,7 @@ export type Database = {
         Returns: undefined
       }
       demander_duplicata: { Args: { p_sacrement: string }; Returns: string }
+      enregistrer_fidele_baptise: { Args: { p_donnees: Json }; Returns: string }
       est_annee_ouverte: { Args: { p_annee: string }; Returns: boolean }
       est_responsable_communaute: {
         Args: { p_communaute: string }
