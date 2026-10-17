@@ -1,4 +1,4 @@
-import type { Database, Tables } from "../../types/database.types";
+import type { Database, Json, Tables } from "../../types/database.types";
 import type { ActivePastoralYear, UserContext } from "../../auth/auth-service";
 import { getSupabaseClient } from "../../lib/supabase";
 import { getAppConfig } from "../../config/app-config";
@@ -491,7 +491,7 @@ function mountFaithfulCreateWizard(
             parrain: String(values.get("new-bapteme-parrain") ?? "").trim(),
             marraine: String(values.get("new-bapteme-marraine") ?? "").trim()
           };
-          const sacrements: Record<string, unknown>[] = [];
+          const sacrements: Json[] = [];
           for (const prefix of ["new-eucharistie","new-confirmation"]) {
             if (!root.querySelector<HTMLInputElement>("#enable-" + prefix)!.checked) continue;
             const date = dateValue(prefix);
@@ -508,7 +508,7 @@ function mountFaithfulCreateWizard(
               marraine: String(values.get(prefix + "-marraine") ?? "").trim()
             });
           }
-          const children: Record<string, unknown>[] = [];
+          const children: Json[] = [];
           for (const card of [...childList.querySelectorAll<HTMLElement>(".faithful-child-entry")]) {
             const value = (name: string): string => card.querySelector<HTMLInputElement | HTMLSelectElement>('[data-child-field="' + name + '"]')?.value.trim() ?? "";
             const prenom = value("prenom"), nom = value("nom");
@@ -526,7 +526,7 @@ function mountFaithfulCreateWizard(
               numero_acte: act || null, page_registre: page || null, statut_bapteme: value("statut_bapteme") || "inconnu", confession: value("confession") || "inconnue"
             });
           }
-          const mariages: Record<string, unknown>[] = [];
+          const mariages: Json[] = [];
           if (marriageCheck.checked) {
             const date = dateValue("new-marriage");
             const type = String(values.get("marriage_type") ?? "post_baptismum");
@@ -614,9 +614,6 @@ function formatPartialDate(
   return new Intl.DateTimeFormat("fr-CD", { day: "2-digit", month: "long", year: "numeric" }).format(new Date(year, month - 1, day));
 }
 
-function renderField(label: string, value: unknown): string {
-  return `<div class="rounded-xl bg-slate-50 p-4"><p class="text-[11px] font-medium uppercase tracking-wide text-slate-400">${escapeHtml(label)}</p><p class="mt-1 text-sm font-medium text-slate-800">${escapeHtml(value || "—")}</p></div>`;
-}
 
 interface PartialDateValues {
   precision: Precision;
