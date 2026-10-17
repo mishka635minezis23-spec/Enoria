@@ -831,7 +831,6 @@ export async function mountFaithfulProfile(
       const R = (first: string, second: string): string => '<div class="row2">' + first + second + '</div>';
       const testor = (minister: unknown, visa?: unknown): string =>
         L("Quod testor ego",minister) + (visa ? '<span class="stamp">' + escapeHtml(visa) + '</span>' : "");
-      const blank = (label: string): string => L(label,"");
       const sacramentPageSection = (title: string, item: typeof baptism, sponsors = false): string => {
         return '<hr><h3>' + title + '</h3>' +
           L("in",item?.lieu) +
@@ -864,6 +863,7 @@ export async function mountFaithfulProfile(
           '<h3 style="text-align:center">IDENTITAS</h3>' +
           L("Nomen",faithfulRecord.prenom) + L("Familia",faithfulRecord.nom) +
           L("Pater",faithfulRecord.nom_pere) + L("Mater",faithfulRecord.nom_mere) +
+          L("Quartier",quartierName) +
           R(L("Nat. in",faithfulRecord.lieu_naissance),L("die",birth)) +
           R(L("Sexus",faithfulRecord.sexe === "masculin" ? "Masculin" : "Féminin"),L("Statut",faithfulRecord.statut === "decede" ? "Décédé" : "Vivant")) +
           (faithfulRecord.statut === "decede" ? L("Obiit die",death) : "") +
@@ -877,12 +877,6 @@ export async function mountFaithfulProfile(
           '<div class="livret-foot">' + escapeHtml(config.parishName) + ' · ' + escapeHtml(community?.nom ?? "Communauté non renseignée") + '</div>' +
         '</section>';
 
-      const marriageLabels: Record<string,string> = {
-        ante_baptismum:"ANTE BAPTISMUM",
-        post_baptismum:"POST BAPTISMUM",
-        obiit_conjux:"OBIIT CONJUX",
-        novas_nuptias:"NOVAS NUPTIAS"
-      };
       const marriageSlot = (
         type: Database["public"]["Enums"]["type_evenement_matrimonial"],
         title: string,
