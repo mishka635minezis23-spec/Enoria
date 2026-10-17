@@ -862,10 +862,10 @@ export async function mountFaithfulProfile(
                 ${bookletLine("in",baptism?.lieu)}${bookletLine("die",dateFor(baptism))}${bookletLine("n°",baptism?.numero_acte)}${bookletLine("Suscepit",baptism?.parrain)}${bookletLine("Matrina",baptism?.marraine)}${bookletLine("Quod testor ego",baptism?.ministre)}
                 ${sacramentBlock("EUCHARISTIA",eucharist)}${sacramentBlock("CONFIRMATIO",confirmation)}
               </section>
-              <section class="min-w-0 border-black/80 p-4 sm:p-5 lg:border-l-2"><h3 class="mb-3 text-center text-[15px] font-bold tracking-widest">MATRIMONIUM</h3>${marriageHtml}
+              <section class="min-w-0 border-t-2 border-black/80 p-4 sm:p-5 lg:border-l-2 lg:border-t-0"><h3 class="mb-3 text-center text-[15px] font-bold tracking-widest">MATRIMONIUM</h3>${marriageHtml}
                 <div class="mt-4 border-t-2 border-black/70 pt-3">${bookletLine("Communauté",community?.nom)}${bookletLine("Quartier",quartierName)}${bookletLine("Depuis le",faithfulRecord.communaute_depuis)}${bookletLine("Statut",faithfulRecord.statut === "decede" ? "Décédé" : "Vivant")}${faithfulRecord.statut === "decede" ? bookletLine("Décès",death) : ""}</div>
               </section>
-              <section class="min-w-0 border-black/80 p-4 sm:p-5 lg:border-l-2"><h3 class="mb-3 text-center text-lg font-bold tracking-[0.2em]">LIBERI</h3>${childrenHtml}${children.length > 5 ? '<p class="mt-2 border-t border-black/50 pt-2 text-[10px] italic text-slate-600">' + children.length + ' enfants enregistrés</p>' : ""}</section>
+              <section class="min-w-0 border-t-2 border-black/80 p-4 sm:p-5 lg:border-l-2 lg:border-t-0"><h3 class="mb-3 text-center text-lg font-bold tracking-[0.2em]">LIBERI</h3>${childrenHtml}${children.length > 5 ? '<p class="mt-2 border-t border-black/50 pt-2 text-[10px] italic text-slate-600">' + children.length + ' enfants enregistrés</p>' : ""}</section>
             </div>
             <div class="border-t-2 border-black/80 px-4 py-2 text-center text-[10px] text-slate-600">Enoria · Document de consultation · Les registres papier restent la référence officielle</div>
           </section>
