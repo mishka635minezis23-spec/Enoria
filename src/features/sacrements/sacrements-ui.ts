@@ -204,7 +204,7 @@ function renderTrendChart(node: HTMLElement, months: MonthPoint[], series: Serie
   }
   const xLabels = months.map((month, index) => '<text x="' + x(index) + '" y="' + (height - 18) + '" text-anchor="middle" fill="currentColor" font-size="11">' + esc(month.label) + '</text>').join("");
   const svg = '<svg class="sacrament-chart-svg" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Évolution des sacrements au cours des quatre derniers mois">' + grid + marks + xLabels + '</svg>';
-  const legend = '<div class="flex flex-wrap gap-x-5 gap-y-2">' + series.map((item) => '<span class="flex items-center gap-2 text-xs text-slate-600"><i class="h-2.5 w-2.5 rounded-full" style="background:' + item.color + '"></i>' + esc(item.plural ?? item.label) + '</span>').join("") + '</div>';
+  const legend = '<div class="flex flex-wrap gap-x-5 gap-y-2">' + series.map((item) => '<span class="flex items-center gap-2 text-xs text-slate-600"><i class="h-2.5 w-2.5 rounded-full" style="background:' + item.color + '"></i>' + esc(item.label) + '</span>').join("") + '</div>';
   node.innerHTML = '<div class="min-w-[520px]">' + svg + '</div>' + legend +
     '<p class="mt-3 text-[11px] text-slate-400">Les traits pointillés montrent la tendance linéaire de chaque série ; les valeurs sont calculées à partir du mois et de l’année du sacrement.</p>';
 }
