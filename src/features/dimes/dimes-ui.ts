@@ -264,11 +264,13 @@ export async function mountDimesPage(container:HTMLElement,context:UserContext,a
 
     const totalUsd=tally(yearDimes,"USD"),totalFc=tally(yearDimes,"FC");
     const distinctPayers=new Set(yearDimes.map((item)=>item.fidele_id)).size;
+    const usdPayers=new Set(yearDimes.filter((item)=>item.devise==="USD").map((item)=>item.fidele_id)).size;
+    const fcPayers=new Set(yearDimes.filter((item)=>item.devise==="FC").map((item)=>item.fidele_id)).size;
     const undated=yearDimes.filter((item)=>!item.date_paiement).length;
     const dated=yearDimes.filter((item)=>!!item.date_paiement).length;
-    container.querySelector<HTMLElement>("#dimes-total-usd")!.textContent=money(totalUsd,"USD");
-    container.querySelector<HTMLElement>("#dimes-total-fc")!.textContent=money(totalFc,"FC");
-    container.querySelector<HTMLElement>("#dimes-contributions")!.textContent=yearDimes.length.toLocaleString("fr-CD");
+    container.querySelector<HTMLElement>("#dimes-total-usd")!.textContent=usdPayers>0&&usdPayers<5?"Masqué (<5)":money(totalUsd,"USD");
+    container.querySelector<HTMLElement>("#dimes-total-fc")!.textContent=fcPayers>0&&fcPayers<5?"Masqué (<5)":money(totalFc,"FC");
+    container.querySelector<HTMLElement>("#dimes-contributions")!.textContent=safeCount(yearDimes.length);
     container.querySelector<HTMLElement>("#dimes-payers")!.textContent=safeCount(distinctPayers);
     container.querySelector<HTMLElement>("#dimes-undated")!.textContent=safeCount(undated);
 
@@ -372,7 +374,7 @@ export async function mountDimesPage(container:HTMLElement,context:UserContext,a
       ["Devise analysée",currency],
       ["Total USD",maskedTotalByCurrency("USD")],
       ["Total FC",maskedTotalByCurrency("FC")],
-      ["Contributions enregistrées",yearDimes.length],
+      ["Contributions enregistrées",safeCount(yearDimes.length)],
       ["Contributeurs distincts",safeCount(distinctPayers)],
       ["Contributions sans date effective",safeCount(undated)],
       ["Versements datés hors année pastorale",safeCount(outsideDateRange)],
