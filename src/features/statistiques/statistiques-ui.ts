@@ -9,11 +9,25 @@ const esc=(value:unknown)=>{
   const map:Record<string,string>={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"};
   return String(value??"").replace(/[&<>"']/g,(c)=>map[c]??c);
 };
-function renderBars(node:HTMLElement,items:{label:string;value:number}[]):void{
-  const max=Math.max(1,...items.map((x)=>x.value));
+type CountDisplay = { label: string; value: number; masked?: boolean };
+function maskSmallCells(items:CountDisplay[]):CountDisplay[]{
+  const masked=new Set<number>();
+  items.forEach((item,index)=>{if(item.value>0&&item.value<5)masked.add(index);});
+  if(masked.size===1){
+    const secondary=items.map((item,index)=>({item,index}))
+      .filter(({item,index})=>!masked.has(index)&&item.value>0)
+      .sort((a,b)=>a.item.value-b.item.value)[0];
+    if(secondary)masked.add(secondary.index);
+  }
+  return items.map((item,index)=>({...item,masked:masked.has(index)}));
+}
+function countLabel(value:number):string{return value>0&&value<5?"Masqué (<5)":value.toLocaleString("fr-CD");}
+function renderBars(node:HTMLElement,items:CountDisplay[]):void{
+  const max=Math.max(1,...items.filter((item)=>!item.masked).map((item)=>item.value));
   node.innerHTML=items.length?items.map((item)=>{
-    const width=Math.max(0,Math.min(100,Math.round(item.value/max*100)));
-    return `<div class="space-y-1.5"><div class="flex justify-between gap-3 text-xs"><span class="truncate text-slate-700">${esc(item.label)}</span><span class="text-slate-500">${item.value.toLocaleString("fr-CD")}</span></div><div class="h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-[var(--enoria-green)]" style="width:${width}%"></div></div></div>`;
+    const width=item.masked?0:Math.max(0,Math.min(100,Math.round(item.value/max*100)));
+    const label=item.masked?"Masqué (<5)":item.value.toLocaleString("fr-CD");
+    return '<div class="space-y-1.5"><div class="flex justify-between gap-3 text-xs"><span class="truncate text-slate-700">'+esc(item.label)+'</span><span class="text-slate-500">'+label+'</span></div><div class="h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-[var(--enoria-green)]" style="width:'+width+'%"></div></div></div>';
   }).join(""):'<p class="text-sm text-slate-400">Aucune donnée accessible.</p>';
 }
 function updateHash(params:URLSearchParams):void{
@@ -120,7 +134,7 @@ export async function mountStatistics(container:HTMLElement,context:UserContext,
         sRows=sRows.filter((row)=>allowedCommunityIds.includes(row.communaute_historique_id??""));
       }
       const living=fRows.reduce((sum,row)=>sum+(row.fideles_actifs??0),0);
-      container.querySelector("#stats-faithful")!.textContent=living.toLocaleString("fr-CD");
+      container.querySelector("#stats-faithful")!.textContent=countLabel(living);
       const sacTotals=new Map<string,number>();
       for(const row of sRows)sacTotals.set(row.type??"autre",(sacTotals.get(row.type??"autre")??0)+(row.total??0));
       const typeLabels:Record<string,string>={bapteme:"Baptêmes",eucharistie:"Eucharisties",confirmation:"Confirmations",mariage:"Mariages"};
@@ -128,12 +142,12 @@ export async function mountStatistics(container:HTMLElement,context:UserContext,
       const marriageCount=marriageStats.count??0;
       if(marriageCount>0)sacItems.push({label:"Mariages",value:marriageCount});
       const sacTotal=sacItems.reduce((sum,item)=>sum+item.value,0);
-      container.querySelector("#stats-sacraments")!.textContent=sacTotal.toLocaleString("fr-CD");
-      renderBars(container.querySelector<HTMLElement>("#stats-sacrament-chart")!,sacItems);
+      container.querySelector("#stats-sacraments")!.textContent=countLabel(sacTotal);
+      renderBars(container.querySelector<HTMLElement>("#stats-sacrament-chart")!,maskSmallCells(sacItems));
 
       const communityNames=new Map(communities.map((x)=>[x.id,x.nom]));
       const communityItems=fRows.map((row)=>({label:communityNames.get(row.communaute_id??"")??"Communauté",value:row.fideles_actifs??0}));
-      renderBars(container.querySelector<HTMLElement>("#stats-community-chart")!,communityItems);
+      renderBars(container.querySelector<HTMLElement>("#stats-community-chart")!,maskSmallCells(communityItems));
 
       const ageCounts=[0,0,0,0,0,0,0];
       const reference=new Date(year.date_fin);
@@ -168,18 +182,21 @@ export async function mountStatistics(container:HTMLElement,context:UserContext,
       }
       const ageLabels=["0–5 ans","6–12 ans","13–17 ans","18–25 ans","26–40 ans","41–60 ans","61 ans et +"];
       const ageItems:AgeBand[]=ageLabels.map((label,index)=>({label,count:ageCounts[index]}));
-      container.querySelector("#stats-ages-known")!.textContent=ageKnown.toLocaleString("fr-CD");
-      renderBars(container.querySelector<HTMLElement>("#stats-age-chart")!,ageItems.map((x)=>({label:x.label,value:x.count})));
+      container.querySelector("#stats-ages-known")!.textContent=countLabel(ageKnown);
+      renderBars(container.querySelector<HTMLElement>("#stats-age-chart")!,maskSmallCells(ageItems.map((x)=>({label:x.label,value:x.count}))));
 
+      const safeSacItems=maskSmallCells(sacItems);
+      const safeAgeItems=maskSmallCells(ageItems.map((x)=>({label:x.label,value:x.count})));
+      const safeCommunityItems=maskSmallCells(communityItems);
       exportRows=[
         ["Indicateur","Valeur"],
         ["Année pastorale",year.libelle],
-        ["Fidèles vivants",living],
-        ["Sacrements",sacTotal],
-        ["Naissances avec année connue",ageKnown],
-        ...sacItems.map((x)=>[`Sacrements — ${x.label}`,x.value]),
-        ...ageItems.map((x)=>[`Âge — ${x.label}`,x.count]),
-        ...communityItems.map((x)=>[`Communauté — ${x.label}`,x.value])
+        ["Fidèles vivants",living>0&&living<5?"Masqué (<5)":living],
+        ["Sacrements",sacTotal>0&&sacTotal<5?"Masqué (<5)":sacTotal],
+        ["Naissances avec année connue",ageKnown>0&&ageKnown<5?"Masqué (<5)":ageKnown],
+        ...safeSacItems.map((x)=>[`Sacrements — ${x.label}`,x.masked?"Masqué (<5)":x.value]),
+        ...safeAgeItems.map((x)=>[`Âge — ${x.label}`,x.masked?"Masqué (<5)":x.value]),
+        ...safeCommunityItems.map((x)=>[`Communauté — ${x.label}`,x.masked?"Masqué (<5)":x.value])
       ];
     }catch(error){
       if(current!==sequence)return;
