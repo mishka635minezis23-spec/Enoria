@@ -603,8 +603,8 @@ async function mountPastoralAnalytics(container:HTMLElement,context:UserContext,
     const nonCommunedIds=new Set([...baptizedIds].filter((id)=>!eucharistIds.has(id)));
     const nonConfirmedIds=new Set([...baptizedIds].filter((id)=>!confirmedIds.has(id)));
     const gapAgeSeries=[
-      {name:"Sans première communion",values:bands.map((band)=>living.filter((person)=>nonCommunedIds.has(person.id)&&band.test(reportAgeAtEnd(person,reference)??-1)).length)},
-      {name:"Sans confirmation",values:bands.map((band)=>living.filter((person)=>nonConfirmedIds.has(person.id)&&band.test(reportAgeAtEnd(person,reference)??-1)).length)}
+      {name:"Sans première communion",values:bands.map((band)=>living.filter((person)=>{const age=reportAgeAtEnd(person,reference);return age!==null&&nonCommunedIds.has(person.id)&&band.test(age);}).length)},
+      {name:"Sans confirmation",values:bands.map((band)=>living.filter((person)=>{const age=reportAgeAtEnd(person,reference);return age!==null&&nonConfirmedIds.has(person.id)&&band.test(age);}).length)}
     ];
     reportLineChart(container.querySelector<HTMLElement>("#analytics-chart-gap-age")!,bands.map((band)=>band.label),gapAgeSeries);
     const male=living.filter((person)=>person.sexe==="masculin").length;
@@ -692,8 +692,9 @@ async function mountPastoralAnalytics(container:HTMLElement,context:UserContext,
     function is25or50YearAnniversary(eventYear:number|null,eventMonth:number|null,eventDay:number|null,precision:string):boolean{
       if(precision!=="exacte"||!eventYear||!eventMonth||!eventDay)return false;
       let targetYear=now.getFullYear();
-      const nextDate=new Date(targetYear,eventMonth-1,eventDay,12);
-      if(nextDate<now){targetYear++;}
+      const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+      const nextDate=new Date(targetYear,eventMonth-1,eventDay);
+      if(nextDate<today){targetYear++;}
       const elapsed=targetYear-eventYear;
       return elapsed===25||elapsed===50;
     }
