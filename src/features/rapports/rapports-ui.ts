@@ -321,6 +321,377 @@ async function exportBaptismRegister(parishId:string,calendarYear:number):Promis
   download(output,"enoria-registre-baptemes-"+calendarYear+".csv");
 }
 
+
+
+type ReportFaithful = Pick<Tables<"fideles">,"id"|"sexe"|"statut"|"naissance_jour"|"naissance_mois"|"naissance_annee"|"naissance_precision"|"communaute_id">;
+type ReportSacrament = Pick<Tables<"sacrements">,"fidele_id"|"type"|"annee_pastorale_id"|"jour"|"mois"|"annee"|"precision"|"communaute_historique_id"|"reference_registre_requise"|"numero_acte"|"page_registre">;
+type ReportMarriage = Pick<Tables<"evenements_matrimoniaux">,"fidele_id"|"type"|"annee_pastorale_id"|"jour"|"mois"|"annee"|"precision"|"communaute_historique_id"|"numero_acte"|"page_registre">;
+type ReportDime = Pick<Tables<"dimes">,"fidele_id"|"annee_pastorale_id"|"montant"|"devise">;
+type ReportSignature = Pick<Tables<"signatures">,"fidele_id"|"annee_pastorale_id"|"signee">;
+type ReportCertificate = Pick<Tables<"certificats">,"statut"|"date_demande"|"date_validation"|"date_emission"|"annee_pastorale_id">;
+type ReportCommunity = Pick<Tables<"communautes">,"id"|"nom"|"quartier_id">;
+type ReportQuartier = Pick<Tables<"quartiers">,"id"|"nom">;
+type ReportPastoralYear = Pick<Tables<"annees_pastorales">,"id"|"libelle"|"date_debut"|"date_fin"|"active">;
+
+async function fetchReportPages<T>(load:(from:number,to:number)=>Promise<{data:T[]|null;error:unknown}>):Promise<T[]>{
+  const rows:T[]=[];
+  let offset=0;
+  while(true){
+    const result=await load(offset,offset+499);
+    if(result.error)throw result.error;
+    const page=result.data??[];
+    rows.push(...page);
+    if(page.length<500)break;
+    offset+=500;
+  }
+  return rows;
+}
+function reportMask(values:number[]):(number|string)[]{
+  const hidden=new Set<number>();
+  values.forEach((value,index)=>{if(value>0&&value<5)hidden.add(index);});
+  if(hidden.size===1){
+    const secondary=values.map((value,index)=>({value,index}))
+      .filter((item)=>!hidden.has(item.index)&&item.value>0)
+      .sort((a,b)=>a.value-b.value)[0];
+    if(secondary)hidden.add(secondary.index);
+  }
+  return values.map((value,index)=>hidden.has(index)?"Masqué (<5)":value);
+}
+function reportNumber(value:number):string{
+  return value>0&&value<5?"Masqué (<5)":value.toLocaleString("fr-CD");
+}
+function reportBarList(node:HTMLElement,items:{label:string;value:number;detail?:string}[]):void{
+  const safe=reportMask(items.map((item)=>item.value));
+  const visible=items.map((item,index)=>({item,value:safe[index]}));
+  const max=Math.max(1,...visible.filter((x)=>typeof x.value==="number").map((x)=>x.item.value));
+  node.innerHTML=items.length?visible.map(({item,value})=>{
+    const masked=typeof value==="string";
+    const width=masked?0:Math.max(0,Math.min(100,item.value/max*100));
+    return '<div class="space-y-1.5"><div class="flex items-center justify-between gap-3 text-xs"><span class="min-w-0 truncate text-slate-700">'+esc(item.label)+'</span><span class="shrink-0 text-slate-500">'+(masked?value:item.value.toLocaleString("fr-CD"))+(item.detail?' · '+esc(item.detail):'')+'</span></div><div class="h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-[var(--enoria-green)]" style="width:'+width+'%"></div></div></div>';
+  }).join(""):'<p class="text-sm text-slate-400">Aucune donnée disponible.</p>';
+}
+function reportLineChart(node:HTMLElement,labels:string[],series:{name:string;values:number[]}[]):void{
+  const width=720,height=250,left=42,right=16,top=18,bottom=38;
+  const plotWidth=width-left-right,plotHeight=height-top-bottom;
+  const visible=series.flatMap((item)=>item.values.filter((value)=>value>=5));
+  const max=Math.max(5,...visible);
+  const x=(index:number)=>left+(labels.length<=1?plotWidth/2:index*plotWidth/(labels.length-1));
+  const y=(value:number)=>top+plotHeight-(value/max)*plotHeight;
+  const colors=["#187A55","#367BC4","#D28B36","#8B6AB0"];
+  const grid=[0,0.25,0.5,0.75,1].map((ratio)=>{
+    const yy=top+plotHeight-ratio*plotHeight;
+    return '<line x1="'+left+'" y1="'+yy+'" x2="'+(width-right)+'" y2="'+yy+'" stroke="#E8EDF2" stroke-width="1"/><text x="'+(left-8)+'" y="'+(yy+4)+'" text-anchor="end" fill="#94A3B8" font-size="10">'+Math.round(max*ratio)+'</text>';
+  }).join("");
+  const seriesSvg=series.map((item,index)=>{
+    const points=item.values.map((value,position)=>({value,position})).filter((point)=>point.value>=5);
+    const segments:string[]=[];
+    let current:string[]=[];
+    let previous=-2;
+    for(const point of points){
+      if(point.position!==previous+1&&current.length){segments.push(current.join(" "));current=[];}
+      current.push(x(point.position)+","+y(point.value));
+      previous=point.position;
+    }
+    if(current.length)segments.push(current.join(" "));
+    const lines=segments.map((segment)=>'<polyline points="'+segment+'" fill="none" stroke="'+colors[index%colors.length]+'" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>').join("");
+    const dots=points.map((point)=>'<circle cx="'+x(point.position)+'" cy="'+y(point.value)+'" r="3.5" fill="'+colors[index%colors.length]+'"/>').join("");
+    return lines+dots;
+  }).join("");
+  const xLabels=labels.map((label,index)=>'<text x="'+x(index)+'" y="'+(height-12)+'" text-anchor="middle" fill="#64748B" font-size="10">'+esc(label)+'</text>').join("");
+  const legend=series.map((item,index)=>'<span class="inline-flex items-center gap-1.5 text-xs text-slate-500"><i class="inline-block h-2 w-2 rounded-full" style="background:'+colors[index%colors.length]+'"></i>'+esc(item.name)+'</span>').join("");
+  const hasPoints=series.some((item)=>item.values.some((value)=>value>=5));
+  node.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Graphique linéaire" class="w-full overflow-visible">'+grid+seriesSvg+xLabels+'</svg><div class="mt-3 flex flex-wrap gap-x-4 gap-y-2">'+legend+'</div>'+(hasPoints?'':'<p class="mt-2 text-xs text-slate-400">Aucun point affichable : les valeurs sont nulles ou masquées car inférieures à cinq.</p>');
+}
+function reportMetricCard(label:string,value:string,sub:string):string{
+  return '<div class="rounded-xl bg-slate-50 p-3"><p class="text-xs text-slate-500">'+esc(label)+'</p><p class="mt-1 text-xl font-semibold text-slate-900">'+esc(value)+'</p><p class="mt-1 text-xs text-slate-400">'+esc(sub)+'</p></div>';
+}
+function reportAgeAtEnd(person:ReportFaithful,reference:Date):number|null{
+  if(!person.naissance_annee||person.naissance_precision==="inconnue")return null;
+  let age=reference.getFullYear()-person.naissance_annee;
+  if(person.naissance_precision==="exacte"&&person.naissance_mois&&person.naissance_jour){
+    if(person.naissance_mois>reference.getMonth()+1||(person.naissance_mois===reference.getMonth()+1&&person.naissance_jour>reference.getDate()))age--;
+  }else if(person.naissance_precision==="mois"&&person.naissance_mois&&person.naissance_mois>reference.getMonth()+1){
+    age--;
+  }
+  return age>=0?age:null;
+}
+function reportMonthLabel(month:number):string{
+  return new Intl.DateTimeFormat("fr-CD",{month:"short"}).format(new Date(2020,month-1,1)).replace(".","");
+}
+function reportDateYearMonth(year:number|null,month:number|null):string|null{
+  if(!year||!month||month<1||month>12)return null;
+  return String(year)+"-"+String(month).padStart(2,"0");
+}
+function reportCsvDownload(rows:unknown[][],filename:string):void{
+  const content="\uFEFF"+rows.map((row)=>row.map(csv).join(";")).join("\r\n");
+  const url=URL.createObjectURL(new Blob([content],{type:"text/csv;charset=utf-8"}));
+  const link=document.createElement("a");
+  link.href=url;
+  link.download=filename;
+  link.click();
+  window.setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+
+async function mountPastoralAnalytics(container:HTMLElement,context:UserContext,activeYear:ActivePastoralYear|null):Promise<void>{
+  const db=getSupabaseClient();
+  const parishId=context.assignments[0].paroisse_id;
+  const isClergyOrSecretary=context.roles.some((role)=>role==="cure"||role==="secretaire");
+  const assignedCommunity=context.assignments.find((item)=>item.active&&item.communaute_id)?.communaute_id??null;
+  const yearSelect=container.querySelector<HTMLSelectElement>("#analytics-year")!;
+  const quartierSelect=container.querySelector<HTMLSelectElement>("#analytics-quartier")!;
+  const communitySelect=container.querySelector<HTMLSelectElement>("#analytics-community")!;
+  const feedback=container.querySelector<HTMLElement>("#reports-feedback")!;
+  const refresh=container.querySelector<HTMLButtonElement>("#analytics-refresh")!;
+  let exportRows:unknown[][]=[];
+  const [years,communities,quartiers,faithful,sacraments,marriages]=await Promise.all([
+    fetchReportPages<ReportPastoralYear>((from,to)=>db.from("annees_pastorales").select("id,libelle,date_debut,date_fin,active").eq("paroisse_id",parishId).order("date_debut",{ascending:false}).range(from,to)),
+    fetchReportPages<ReportCommunity>((from,to)=>db.from("communautes").select("id,nom,quartier_id").eq("paroisse_id",parishId).order("nom").range(from,to)),
+    fetchReportPages<ReportQuartier>((from,to)=>db.from("quartiers").select("id,nom").eq("paroisse_id",parishId).order("nom").range(from,to)),
+    fetchReportPages<ReportFaithful>((from,to)=>db.from("fideles").select("id,sexe,statut,naissance_jour,naissance_mois,naissance_annee,naissance_precision,communaute_id").eq("paroisse_id",parishId).range(from,to)),
+    fetchReportPages<ReportSacrament>((from,to)=>db.from("sacrements").select("fidele_id,type,annee_pastorale_id,jour,mois,annee,precision,communaute_historique_id,reference_registre_requise,numero_acte,page_registre").eq("paroisse_id",parishId).range(from,to)),
+    fetchReportPages<ReportMarriage>((from,to)=>db.from("evenements_matrimoniaux").select("fidele_id,type,annee_pastorale_id,jour,mois,annee,precision,communaute_historique_id,numero_acte,page_registre").eq("paroisse_id",parishId).range(from,to))
+  ]);
+  const visibleCommunities=isClergyOrSecretary?communities:communities.filter((item)=>item.id===assignedCommunity);
+  const visibleCommunityIds=new Set(visibleCommunities.map((item)=>item.id));
+  const visibleFaithful=faithful.filter((person)=>isClergyOrSecretary||person.communaute_id===assignedCommunity);
+  const visibleSacraments=sacraments.filter((item)=>isClergyOrSecretary||item.communaute_historique_id===assignedCommunity);
+  const visibleMarriages=marriages.filter((item)=>isClergyOrSecretary||item.communaute_historique_id===assignedCommunity);
+  const [dimes,signatures,certificates]=isClergyOrSecretary?await Promise.all([
+    fetchReportPages<ReportDime>((from,to)=>db.from("dimes").select("fidele_id,annee_pastorale_id,montant,devise").range(from,to)),
+    fetchReportPages<ReportSignature>((from,to)=>db.from("signatures").select("fidele_id,annee_pastorale_id,signee").range(from,to)),
+    fetchReportPages<ReportCertificate>((from,to)=>db.from("certificats").select("statut,date_demande,date_validation,date_emission,annee_pastorale_id").range(from,to))
+  ]):[[],[],[]] as [ReportDime[],ReportSignature[],ReportCertificate[]];
+
+  const yearOptions=years.map((year)=>'<option value="'+esc(year.id)+'">'+esc(year.libelle)+(year.active?' · active':'')+'</option>').join("");
+  yearSelect.innerHTML=yearOptions||'<option value="">Aucune année pastorale</option>';
+  yearSelect.value=years.some((year)=>year.id===activeYear?.id)?activeYear!.id:years.find((year)=>year.active)?.id??years[0]?.id??"";
+  quartierSelect.innerHTML='<option value="">Tous les quartiers</option>'+quartiers.map((item)=>'<option value="'+esc(item.id)+'">'+esc(item.nom)+'</option>').join("");
+  communitySelect.innerHTML='<option value="">Toutes les communautés</option>'+visibleCommunities.map((item)=>'<option value="'+esc(item.id)+'">'+esc(item.nom)+'</option>').join("");
+  if(!isClergyOrSecretary){
+    container.querySelector<HTMLElement>("#analytics-quartier-wrap")!.classList.add("hidden");
+    container.querySelector<HTMLElement>("#analytics-community-wrap")!.classList.add("hidden");
+    communitySelect.value=assignedCommunity??"";
+    communitySelect.disabled=true;
+  }
+  if(!isClergyOrSecretary){
+    container.querySelector<HTMLElement>("#analytics-dime-status")!.textContent="Accès agrégé réservé au curé et à la secrétaire";
+    container.querySelector<HTMLElement>("#analytics-dime-summary")!.innerHTML=reportMetricCard("Accès","Restreint","Données financières protégées");
+    container.querySelector<HTMLElement>("#analytics-chart-dimes")!.innerHTML="";
+    container.querySelector<HTMLElement>("#analytics-dime-note")!.textContent="Les responsables ne consultent pas les données financières détaillées.";
+    container.querySelector<HTMLElement>("#analytics-pascal")!.innerHTML=reportMetricCard("Accès","Restreint","Données administratives protégées");
+    container.querySelector<HTMLElement>("#analytics-certificates")!.innerHTML=reportMetricCard("Accès","Restreint","Données administratives protégées");
+  }
+
+  const communityMap=new Map(communities.map((item)=>[item.id,item]));
+  const quartierMap=new Map(quartiers.map((item)=>[item.id,item.nom]));
+  const faithfulMap=new Map(visibleFaithful.map((item)=>[item.id,item]));
+  const cohortMap=new Map<string,{baptized:Set<string>;eucharist:Set<string>;confirmation:Set<string>}>();
+  for(const row of visibleSacraments){
+    if(!row.annee)return;
+    const person=faithfulMap.get(row.fidele_id);
+    if(!person||person.statut!=="vivant")continue;
+    if(row.type==="bapteme"){
+      const cohort=cohortMap.get(String(row.annee))??{baptized:new Set<string>(),eucharist:new Set<string>(),confirmation:new Set<string>()};
+      cohort.baptized.add(row.fidele_id);cohortMap.set(String(row.annee),cohort);
+    }
+  }
+  const firstBaptismYear=new Map<string,number>();
+  const firstEucharistYear=new Map<string,number>();
+  const firstConfirmationYear=new Map<string,number>();
+  for(const row of visibleSacraments){
+    if(!row.annee)continue;
+    const target=row.type==="bapteme"?firstBaptismYear:row.type==="eucharistie"?firstEucharistYear:row.type==="confirmation"?firstConfirmationYear:null;
+    if(target&&(!target.has(row.fidele_id)||row.annee<target.get(row.fidele_id)!))target.set(row.fidele_id,row.annee);
+  }
+  for(const [id,baptismYear] of firstBaptismYear){
+    const cohort=cohortMap.get(String(baptismYear))??{baptized:new Set<string>(),eucharist:new Set<string>(),confirmation:new Set<string>()};
+    cohort.baptized.add(id);
+    const eucharistYear=firstEucharistYear.get(id);
+    const confirmationYear=firstConfirmationYear.get(id);
+    if(eucharistYear&&eucharistYear>=baptismYear)cohort.eucharist.add(id);
+    if(confirmationYear&&confirmationYear>=baptismYear)cohort.confirmation.add(id);
+    cohortMap.set(String(baptismYear),cohort);
+  }
+
+  function render():void{
+    feedback.className="hidden";
+    const year=years.find((item)=>item.id===yearSelect.value);
+    if(!year){
+      feedback.textContent="Aucune année pastorale disponible pour calculer les rapports.";
+      feedback.className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800";
+      return;
+    }
+    const selectedCommunity=communitySelect.value;
+    const selectedQuartier=quartierSelect.value;
+    const scopeCommunityIds=new Set(visibleCommunities.filter((item)=>
+      (!selectedCommunity||item.id===selectedCommunity)&&(!selectedQuartier||item.quartier_id===selectedQuartier)
+    ).map((item)=>item.id));
+    const inScopeFaithful=visibleFaithful.filter((person)=>scopeCommunityIds.has(person.communaute_id));
+    const living=inScopeFaithful.filter((person)=>person.statut==="vivant");
+    const inScopeSacraments=visibleSacraments.filter((row)=>row.annee_pastorale_id===year.id&&scopeCommunityIds.has(row.communaute_historique_id));
+    const inScopeMarriages=visibleMarriages.filter((row)=>row.annee_pastorale_id===year.id&&row.type==="novas_nuptias"&&scopeCommunityIds.has(row.communaute_historique_id));
+    const countType=(type:string)=>inScopeSacraments.filter((row)=>row.type===type).length;
+    const baptismCount=countType("bapteme");
+    const eucharistCount=countType("eucharistie");
+    const confirmationCount=countType("confirmation");
+    const marriageCount=inScopeMarriages.length;
+    container.querySelector<HTMLElement>("#analytics-kpi-faithful")!.textContent=reportNumber(living.length);
+    container.querySelector<HTMLElement>("#analytics-kpi-baptism")!.textContent=reportNumber(baptismCount);
+    container.querySelector<HTMLElement>("#analytics-kpi-eucharist")!.textContent=reportNumber(eucharistCount);
+    container.querySelector<HTMLElement>("#analytics-kpi-confirmation")!.textContent=reportNumber(confirmationCount);
+    container.querySelector<HTMLElement>("#analytics-kpi-marriage")!.textContent=reportNumber(marriageCount);
+
+    const monthLabels=Array.from({length:12},(_,index)=>reportMonthLabel(index+1));
+    const monthSeries=[
+      {name:"Baptêmes",values:Array(12).fill(0) as number[]},
+      {name:"Premières communions",values:Array(12).fill(0) as number[]},
+      {name:"Confirmations",values:Array(12).fill(0) as number[]},
+      {name:"Mariages",values:Array(12).fill(0) as number[]}
+    ];
+    for(const row of inScopeSacraments){
+      if(!row.mois||row.mois<1||row.mois>12)continue;
+      const index=row.type==="bapteme"?0:row.type==="eucharistie"?1:2;
+      monthSeries[index].values[row.mois-1]++;
+    }
+    for(const row of inScopeMarriages)if(row.mois&&row.mois>=1&&row.mois<=12)monthSeries[3].values[row.mois-1]++;
+    reportLineChart(container.querySelector<HTMLElement>("#analytics-chart-monthly")!,monthLabels,monthSeries);
+
+    const baptizedIds=new Set(visibleSacraments.filter((row)=>row.type==="bapteme"&&faithfulMap.get(row.fidele_id)?.statut==="vivant").map((row)=>row.fidele_id));
+    const eucharistIds=new Set(visibleSacraments.filter((row)=>row.type==="eucharistie"&&baptizedIds.has(row.fidele_id)).map((row)=>row.fidele_id));
+    const confirmedIds=new Set(visibleSacraments.filter((row)=>row.type==="confirmation"&&baptizedIds.has(row.fidele_id)).map((row)=>row.fidele_id));
+    const journey=[
+      {label:"Baptisés vivants",value:[...baptizedIds].filter((id)=>scopeCommunityIds.has(faithfulMap.get(id)?.communaute_id??"")).length},
+      {label:"Ont reçu la première communion",value:[...eucharistIds].filter((id)=>scopeCommunityIds.has(faithfulMap.get(id)?.communaute_id??"")).length},
+      {label:"Ont reçu la confirmation",value:[...confirmedIds].filter((id)=>scopeCommunityIds.has(faithfulMap.get(id)?.communaute_id??"")).length}
+    ];
+    const baptizedScoped=journey[0].value;
+    const notCommuned=Math.max(0,baptizedScoped-journey[1].value);
+    const notConfirmed=Math.max(0,baptizedScoped-journey[2].value);
+    reportBarList(container.querySelector<HTMLElement>("#analytics-chart-funnel")!,[
+      ...journey,
+      {label:"Baptisés sans première communion (indicatif)",value:notCommuned},
+      {label:"Baptisés sans confirmation (indicatif)",value:notConfirmed}
+    ]);
+
+    const reference=new Date(year.date_fin+"T12:00:00");
+    const bands=[{label:"0–5 ans",test:(age:number)=>age<=5},{label:"6–12 ans",test:(age:number)=>age>=6&&age<=12},{label:"13–17 ans",test:(age:number)=>age>=13&&age<=17},{label:"18–25 ans",test:(age:number)=>age>=18&&age<=25},{label:"26–40 ans",test:(age:number)=>age>=26&&age<=40},{label:"41–60 ans",test:(age:number)=>age>=41&&age<=60},{label:"61 ans et +",test:(age:number)=>age>=61}];
+    const ageCounts=bands.map(()=>0);
+    let ageKnown=0;
+    for(const person of living){
+      const age=reportAgeAtEnd(person,reference);
+      if(age===null)continue;
+      const index=bands.findIndex((band)=>band.test(age));
+      if(index>=0){ageCounts[index]++;ageKnown++;}
+    }
+    reportBarList(container.querySelector<HTMLElement>("#analytics-chart-age")!,bands.map((band,index)=>({label:band.label,value:ageCounts[index]})));
+    const male=living.filter((person)=>person.sexe==="masculin").length;
+    const female=living.filter((person)=>person.sexe==="feminin").length;
+    container.querySelector<HTMLElement>("#analytics-gender-summary")!.innerHTML=
+      reportMetricCard("Hommes",reportNumber(male),"Fidèles vivants")+
+      reportMetricCard("Femmes",reportNumber(female),"Fidèles vivants");
+
+    const territoryCounts=visibleCommunities.filter((item)=>scopeCommunityIds.has(item.id)).map((community)=>({
+      label:community.nom,value:living.filter((person)=>person.communaute_id===community.id).length,
+      detail:quartierMap.get(community.quartier_id)??""
+    })).sort((a,b)=>b.value-a.value);
+    reportBarList(container.querySelector<HTMLElement>("#analytics-chart-territory")!,territoryCounts);
+
+    const cohorts=[...cohortMap.entries()].map(([label,group])=>({
+      label, baptized:group.baptized.size,
+      eucharist:[...group.eucharist].filter((id)=>scopeCommunityIds.has(faithfulMap.get(id)?.communaute_id??"")).length,
+      confirmation:[...group.confirmation].filter((id)=>scopeCommunityIds.has(faithfulMap.get(id)?.communaute_id??"")).length
+    })).filter((item)=>item.baptized>0).sort((a,b)=>Number(a.label)-Number(b.label)).slice(-10);
+    reportLineChart(container.querySelector<HTMLElement>("#analytics-chart-cohort")!,cohorts.map((item)=>item.label),[
+      {name:"Baptisés",values:cohorts.map((item)=>item.baptized)},
+      {name:"Première communion",values:cohorts.map((item)=>item.eucharist)},
+      {name:"Confirmation",values:cohorts.map((item)=>item.confirmation)}
+    ]);
+
+    if(isClergyOrSecretary){
+      const inScopeDimes=dimes.filter((row)=>row.annee_pastorale_id===year.id&&scopeCommunityIds.has(faithfulMap.get(row.fidele_id)?.communaute_id??""));
+      const usd=inScopeDimes.filter((row)=>row.devise==="USD").reduce((sum,row)=>sum+Number(row.montant),0);
+      const fc=inScopeDimes.filter((row)=>row.devise==="FC").reduce((sum,row)=>sum+Number(row.montant),0);
+      const payerCount=new Set(inScopeDimes.map((row)=>row.fidele_id)).size;
+      container.querySelector<HTMLElement>("#analytics-dime-summary")!.innerHTML=
+        reportMetricCard("Collecte USD",usd.toLocaleString("en-US",{maximumFractionDigits:2})+" $","Montant enregistré")+
+        reportMetricCard("Collecte FC",fc.toLocaleString("fr-CD",{maximumFractionDigits:0})+" FC","Montant enregistré");
+      container.querySelector<HTMLElement>("#analytics-dime-note")!.textContent=reportNumber(payerCount)+" contributeurs distincts dans la période. Le taux de participation fiable nécessitera un effectif de référence historisé.";
+      const dimeYears=years.slice().reverse();
+      const dimeSeries=["USD","FC"].map((currency)=>({name:currency,values:dimeYears.map((item)=>dimes.filter((row)=>row.annee_pastorale_id===item.id&&row.devise===currency&&scopeCommunityIds.has(faithfulMap.get(row.fidele_id)?.communaute_id??"")).reduce((sum,row)=>sum+Number(row.montant),0))}));
+      reportLineChart(container.querySelector<HTMLElement>("#analytics-chart-dimes")!,dimeYears.map((item)=>item.libelle),dimeSeries);
+      container.querySelector<HTMLElement>("#analytics-dime-status")!.textContent="Disponible pour le curé et la secrétaire";
+      const signed=signatures.filter((row)=>row.annee_pastorale_id===year.id&&row.signee&&scopeCommunityIds.has(faithfulMap.get(row.fidele_id)?.communaute_id??""));
+      container.querySelector<HTMLElement>("#analytics-pascal")!.innerHTML=signatures.length
+        ?reportMetricCard("Visas enregistrés",reportNumber(signed.length),"Année pastorale sélectionnée")
+        :'<div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><p class="font-semibold text-amber-900">Données non disponibles</p><p class="mt-1 text-sm text-amber-800">Aucun visa pascal n’est actuellement enregistré. Enoria ne calcule donc pas de faux taux de participation.</p></div>';
+      const selectedCertificates=certificates.filter((row)=>row.annee_pastorale_id===year.id);
+      const emitted=selectedCertificates.filter((row)=>row.statut==="emis").length;
+      const pending=selectedCertificates.filter((row)=>row.statut==="attente").length;
+      const durations=selectedCertificates.filter((row)=>row.date_emission).map((row)=>Math.max(0,(new Date(row.date_emission!).getTime()-new Date(row.date_demande).getTime())/86400000));
+      const average=durations.length?durations.reduce((sum,value)=>sum+value,0)/durations.length:null;
+      container.querySelector<HTMLElement>("#analytics-certificates")!.innerHTML=
+        reportMetricCard("Demandes",reportNumber(selectedCertificates.length),"Période sélectionnée")+
+        reportMetricCard("Duplicatas émis",reportNumber(emitted),"Statut émis")+
+        reportMetricCard("En attente",reportNumber(pending),"À traiter")+
+        reportMetricCard("Délai moyen",average===null?"—":average.toFixed(1)+" j",durations.length+" dossiers avec date d’émission");
+    }
+
+    const missingBirth=living.filter((person)=>person.naissance_precision==="inconnue"||!person.naissance_annee).length;
+    const approximateBirth=living.filter((person)=>person.naissance_precision==="annee"||person.naissance_precision==="mois").length;
+    const missingCommunity=inScopeFaithful.filter((person)=>!person.communaute_id||!communityMap.has(person.communaute_id)).length;
+    const missingReferences=inScopeSacraments.filter((row)=>row.reference_registre_requise&&(!row.numero_acte||!row.page_registre)).length;
+    const approximateEvents=inScopeSacraments.filter((row)=>row.precision!=="exacte").length+inScopeMarriages.filter((row)=>row.precision!=="exacte").length;
+    const suspiciousDefault=inScopeSacraments.filter((row)=>row.precision==="exacte"&&row.jour===1&&row.mois===1).length+inScopeMarriages.filter((row)=>row.precision==="exacte"&&row.jour===1&&row.mois===1).length;
+    container.querySelector<HTMLElement>("#analytics-quality")!.innerHTML=[
+      reportMetricCard("Naissances inconnues",reportNumber(missingBirth),"Fidèles vivants"),
+      reportMetricCard("Naissances approximatives",reportNumber(approximateBirth),"Année ou mois seulement"),
+      reportMetricCard("Références d’acte incomplètes",reportNumber(missingReferences),"N° d’acte ou page manquant"),
+      reportMetricCard("Dates sacramentelles imprécises",reportNumber(approximateEvents),"Année, mois ou inconnue"),
+      reportMetricCard("Dates au 01/01",reportNumber(suspiciousDefault),"À vérifier, pas automatiquement erronées"),
+      reportMetricCard("Fiches sans communauté valide",reportNumber(missingCommunity),"Dans le périmètre")
+    ].join("");
+
+    exportRows=[
+      ["Indicateur","Valeur"],
+      ["Année pastorale",year.libelle],
+      ["Fidèles vivants",reportNumber(living.length)],
+      ["Baptêmes",reportNumber(baptismCount)],
+      ["Premières communions",reportNumber(eucharistCount)],
+      ["Confirmations",reportNumber(confirmationCount)],
+      ["Mariages",reportNumber(marriageCount)],
+      ["Baptisés vivants",reportNumber(baptizedScoped)],
+      ["Baptisés sans première communion",reportNumber(notCommuned)],
+      ["Baptisés sans confirmation",reportNumber(notConfirmed)],
+      ["Âges connus",reportNumber(ageKnown)],
+      ["Hommes",reportNumber(male)],
+      ["Femmes",reportNumber(female)],
+      ["Naissances inconnues",reportNumber(missingBirth)],
+      ["Naissances approximatives",reportNumber(approximateBirth)],
+      ["Références d'acte incomplètes",reportNumber(missingReferences)],
+      ["Dates au 01/01 à vérifier",reportNumber(suspiciousDefault)]
+    ];
+    if(isClergyOrSecretary){
+      exportRows.push(
+        ["Collecte USD",usd.toLocaleString("en-US",{maximumFractionDigits:2})],
+        ["Collecte FC",fc.toLocaleString("fr-CD",{maximumFractionDigits:0})],
+        ["Contributeurs distincts",reportNumber(payerCount)],
+        ["Visas pascals enregistrés",reportNumber(signed.length)],
+        ["Duplicatas",reportNumber(selectedCertificates.length)]
+      );
+    }
+  }
+
+  yearSelect.addEventListener("change",render);
+  quartierSelect.addEventListener("change",render);
+  communitySelect.addEventListener("change",render);
+  refresh.addEventListener("click",()=>render());
+  container.querySelector<HTMLButtonElement>("#analytics-export")!.addEventListener("click",()=>{
+    if(!exportRows.length)return;
+    reportCsvDownload(exportRows,"enoria-synthese-pastorale-"+(yearSelect.selectedOptions[0]?.textContent??"annee")+".csv");
+  });
+  render();
+}
+
 export async function mountReports(container:HTMLElement,context:UserContext,activeYear:ActivePastoralYear|null):Promise<void>{
   const canUseNominalReports=context.roles.some((role)=>role==="secretaire"||role==="cure");
   const feedback=container.querySelector<HTMLElement>("#reports-feedback")!;
@@ -364,6 +735,7 @@ export async function mountReports(container:HTMLElement,context:UserContext,act
   }
   type.addEventListener("change",syncReportControls);
   syncReportControls();
+  await mountPastoralAnalytics(container,context,activeYear);
 
   form.addEventListener("submit",async(event)=>{
     event.preventDefault();
