@@ -82,7 +82,7 @@ function renderLineChart(node:HTMLElement,labels:string[],series:DimeSeries[],em
     const yy=top+plotHeight-ratio*plotHeight;
     return '<line x1="'+left+'" y1="'+yy+'" x2="'+(width-right)+'" y2="'+yy+'" stroke="#E8EDF2" stroke-width="1"/><text x="'+(left-8)+'" y="'+(yy+4)+'" text-anchor="end" fill="#94A3B8" font-size="10">'+Math.round(max*ratio).toLocaleString("fr-CD")+'</text>';
   }).join("");
-  const lines=series.map((item,index)=>{
+  const lines=series.map((item)=>{
     const segments:string[]=[];
     let segment:string[]=[];
     item.values.forEach((value,position)=>{
@@ -115,9 +115,6 @@ function renderBars(node:HTMLElement,items:{label:string;value:number;payers:num
     const label=masked?"Masqué (<5)":money(item.value,currency);
     return '<div class="space-y-1.5"><div class="flex items-center justify-between gap-3 text-xs"><span class="min-w-0 truncate text-slate-700">'+escapeHtml(item.label)+'</span><span class="shrink-0 text-slate-500">'+label+'</span></div><div class="h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-[var(--enoria-green)]" style="width:'+width+'%"></div></div></div>';
   }).join("");
-}
-function metric(label:string,value:string,detail:string):string{
-  return '<div class="rounded-xl bg-slate-50 p-3"><p class="text-xs text-slate-500">'+escapeHtml(label)+'</p><p class="mt-1 text-lg font-semibold text-slate-900">'+escapeHtml(value)+'</p><p class="mt-1 text-xs text-slate-400">'+escapeHtml(detail)+'</p></div>';
 }
 function aggregateRows(rows:DimeRow[],communityMap:Map<string,CommunityRow>,quarterMap:Map<string,QuarterRow>,currency:"USD"|"FC"): {label:string;value:number;payers:number}[]{
   const grouped=new Map<string,{label:string;value:number;payers:Set<string>}>();
@@ -340,7 +337,7 @@ export async function mountDimesPage(container:HTMLElement,context:UserContext,a
         label:item.label,
         color:PALETTE[index%PALETTE.length],
         values:item.values.map((value,month)=>hiddenByMonth[month].has(index)?null:value)
-      })).filter((item,index)=>grid[index].payers.some((payers)=>payers.size>0));
+      })).filter((_,index)=>grid[index].payers.some((payers)=>payers.size>0));
     };
     const amountSeries=makeMaskedSeries(amountGrid);
     const payerSeries=makeMaskedSeries(payerGrid);
