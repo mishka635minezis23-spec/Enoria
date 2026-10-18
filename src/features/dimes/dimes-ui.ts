@@ -252,14 +252,25 @@ export async function mountDimesPage(container:HTMLElement,context:UserContext,a
       return;
     }
     const currency=currencySelect.value==="FC"?"FC":"USD";
-    const [yearDimes,latestDimes]=await Promise.all([
-      fetchYearDimes(selectedYear.id),
-      fetchLatestDimes()
-    ]);
-    if(sequence!==loadingSequence)return;
-    const ids=[...new Set([...yearDimes,...latestDimes].map((item)=>item.fidele_id))];
-    const people=await fetchPeople(ids);
-    if(sequence!==loadingSequence)return;
+    let yearDimes:DimeRow[]=[];
+    let latestDimes:DimeRow[]=[];
+    let people=new Map<string,PersonRow>();
+    try{
+      [yearDimes,latestDimes]=await Promise.all([
+        fetchYearDimes(selectedYear.id),
+        fetchLatestDimes()
+      ]);
+      if(sequence!==loadingSequence)return;
+      const ids=[...new Set([...yearDimes,...latestDimes].map((item)=>item.fidele_id))];
+      people=await fetchPeople(ids);
+      if(sequence!==loadingSequence)return;
+    }catch(error){
+      if(sequence!==loadingSequence)return;
+      feedback.textContent=error instanceof Error?error.message:"Impossible de charger les statistiques des dîmes.";
+      feedback.className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700";
+      recentRowsNode.innerHTML='<tr><td colspan="6" class="px-3 py-10 text-center text-sm text-rose-600">Impossible de charger les paiements.</td></tr>';
+      return;
+    }
     renderRecent(latestDimes,people);
 
     const totalUsd=tally(yearDimes,"USD"),totalFc=tally(yearDimes,"FC");
@@ -300,12 +311,10 @@ export async function mountDimesPage(container:HTMLElement,context:UserContext,a
     const amountByWard=new Map(amountGrid.map((item)=>[item.key,item]));
     const payerByWard=new Map(payerGrid.map((item)=>[item.key,item]));
     const monthlyTotals=Array(months.length).fill(0) as number[];
-    const monthlyPayers=Array.from({length:months.length},()=>new Set<string>());
     const monthlyCurrencyPayers=Array.from({length:months.length},()=>new Set<string>());
     for(const row of inPeriodRows){
       const month=monthIndex.get(dateMonthKey(row.date_paiement!));
       if(month===undefined)continue;
-      monthlyPayers[month].add(row.fidele_id);
       if(row.devise===currency){
         monthlyTotals[month]+=Number(row.montant);
         monthlyCurrencyPayers[month].add(row.fidele_id);
