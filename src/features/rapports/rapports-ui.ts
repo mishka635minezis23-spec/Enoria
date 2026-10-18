@@ -140,7 +140,7 @@ async function exportDimes(yearId:string):Promise<void>{
 
 
 type AnnualFaithfulRow = Pick<Tables<"fideles">,"id"|"prenom"|"nom"|"sexe"|"naissance_jour"|"naissance_mois"|"naissance_annee"|"naissance_precision">;
-type AnnualEvent = {kind:"Baptêmes"|"Confirmations"|"Mariages";fideleId:string;day:number|null;month:number|null;year:number|null;precision:string};
+type AnnualEvent = {kind:"Baptêmes"|"Premières communions"|"Confirmations"|"Mariages";fideleId:string;day:number|null;month:number|null;year:number|null;precision:string};
 const AGE_BANDS:{label:string;test:(age:number)=>boolean}[]=[
   {label:"Moins de 1 an",test:(age)=>age<1},
   {label:"1–5 ans",test:(age)=>age>=1&&age<=5},
@@ -189,7 +189,7 @@ function ageAtExactCelebration(person:AnnualFaithfulRow|undefined,event:AnnualEv
   if(eventMonth<birthMonth||(eventMonth===birthMonth&&eventDay<birthDay))age--;
   return age>=0?age:null;
 }
-async function fetchByCalendarYear(parishId:string,calendarYear:number,type:"bapteme"|"confirmation"):Promise<Tables<"sacrements">[]>{
+async function fetchByCalendarYear(parishId:string,calendarYear:number,type:"bapteme"|"eucharistie"|"confirmation"):Promise<Tables<"sacrements">[]>{
   const db=getSupabaseClient();
   const rows:Tables<"sacrements">[]=[];
   let offset=0;
@@ -221,8 +221,9 @@ async function fetchMarriagesByCalendarYear(parishId:string,calendarYear:number)
 }
 async function exportAnnualBishopReport(parishId:string,calendarYear:number):Promise<void>{
   const db=getSupabaseClient();
-  const [baptisms,confirmations,marriages,parishResult]=await Promise.all([
+  const [baptisms,eucharists,confirmations,marriages,parishResult]=await Promise.all([
     fetchByCalendarYear(parishId,calendarYear,"bapteme"),
+    fetchByCalendarYear(parishId,calendarYear,"eucharistie"),
     fetchByCalendarYear(parishId,calendarYear,"confirmation"),
     fetchMarriagesByCalendarYear(parishId,calendarYear),
     db.from("paroisses").select("nom").eq("id",parishId).maybeSingle()
@@ -230,11 +231,12 @@ async function exportAnnualBishopReport(parishId:string,calendarYear:number):Pro
   if(parishResult.error)throw parishResult.error;
   const events:AnnualEvent[]=[
     ...baptisms.map((row)=>({kind:"Baptêmes" as const,fideleId:row.fidele_id,day:row.jour,month:row.mois,year:row.annee,precision:row.precision})),
+    ...eucharists.map((row)=>({kind:"Premières communions" as const,fideleId:row.fidele_id,day:row.jour,month:row.mois,year:row.annee,precision:row.precision})),
     ...confirmations.map((row)=>({kind:"Confirmations" as const,fideleId:row.fidele_id,day:row.jour,month:row.mois,year:row.annee,precision:row.precision})),
     ...marriages.map((row)=>({kind:"Mariages" as const,fideleId:row.fidele_id,day:row.jour,month:row.mois,year:row.annee,precision:row.precision}))
   ];
   const people=await fetchAnnualFaithfulRows([...new Set(events.map((event)=>event.fideleId))]);
-  const kinds:AnnualEvent["kind"][]=["Baptêmes","Confirmations","Mariages"];
+  const kinds:AnnualEvent["kind"][]=["Baptêmes","Premières communions","Confirmations","Mariages"];
   const eventsByKind=new Map(kinds.map((kind)=>[kind,events.filter((event)=>event.kind===kind)]));
   const safeTypeCounts=maskSmallCounts(kinds.map((kind)=>eventsByKind.get(kind)!.length));
   const output:unknown[][]=[
