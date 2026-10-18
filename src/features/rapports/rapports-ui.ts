@@ -325,7 +325,7 @@ async function exportBaptismRegister(parishId:string,calendarYear:number):Promis
 
 
 
-type ReportFaithful = Pick<Tables<"fideles">,"id"|"sexe"|"statut"|"naissance_jour"|"naissance_mois"|"naissance_annee"|"naissance_precision"|"communaute_id">;
+type ReportFaithful = Pick<Tables<"fideles">,"id"|"prenom"|"nom"|"sexe"|"statut"|"naissance_jour"|"naissance_mois"|"naissance_annee"|"naissance_precision"|"communaute_id">;
 type ReportSacrament = Pick<Tables<"sacrements">,"fidele_id"|"type"|"annee_pastorale_id"|"jour"|"mois"|"annee"|"precision"|"communaute_historique_id"|"reference_registre_requise"|"numero_acte"|"page_registre">;
 type ReportMarriage = Pick<Tables<"evenements_matrimoniaux">,"fidele_id"|"type"|"annee_pastorale_id"|"jour"|"mois"|"annee"|"precision"|"communaute_historique_id"|"numero_acte"|"page_registre">;
 type ReportDime = Pick<Tables<"dimes">,"fidele_id"|"annee_pastorale_id"|"montant"|"devise">;
@@ -460,7 +460,7 @@ async function mountPastoralAnalytics(container:HTMLElement,context:UserContext,
     fetchReportPages<ReportPastoralYear>(async (from,to)=>db.from("annees_pastorales").select("id,libelle,date_debut,date_fin,active").eq("paroisse_id",parishId).order("date_debut",{ascending:false}).range(from,to)),
     fetchReportPages<ReportCommunity>(async (from,to)=>db.from("communautes").select("id,nom,quartier_id").eq("paroisse_id",parishId).order("nom").range(from,to)),
     fetchReportPages<ReportQuartier>(async (from,to)=>db.from("quartiers").select("id,nom").eq("paroisse_id",parishId).order("nom").range(from,to)),
-    fetchReportPages<ReportFaithful>(async (from,to)=>db.from("fideles").select("id,sexe,statut,naissance_jour,naissance_mois,naissance_annee,naissance_precision,communaute_id").eq("paroisse_id",parishId).range(from,to)),
+    fetchReportPages<ReportFaithful>(async (from,to)=>db.from("fideles").select("id,prenom,nom,sexe,statut,naissance_jour,naissance_mois,naissance_annee,naissance_precision,communaute_id").eq("paroisse_id",parishId).range(from,to)),
     fetchReportPages<ReportSacrament>(async (from,to)=>db.from("sacrements").select("fidele_id,type,annee_pastorale_id,jour,mois,annee,precision,communaute_historique_id,reference_registre_requise,numero_acte,page_registre").eq("paroisse_id",parishId).range(from,to)),
     fetchReportPages<ReportMarriage>(async (from,to)=>db.from("evenements_matrimoniaux").select("fidele_id,type,annee_pastorale_id,jour,mois,annee,precision,communaute_historique_id,numero_acte,page_registre").eq("paroisse_id",parishId).range(from,to))
   ]);
@@ -600,6 +600,13 @@ async function mountPastoralAnalytics(container:HTMLElement,context:UserContext,
       if(index>=0){ageCounts[index]++;ageKnown++;}
     }
     reportBarList(container.querySelector<HTMLElement>("#analytics-chart-age")!,bands.map((band,index)=>({label:band.label,value:ageCounts[index]})));
+    const nonCommunedIds=new Set([...baptizedIds].filter((id)=>!eucharistIds.has(id)));
+    const nonConfirmedIds=new Set([...baptizedIds].filter((id)=>!confirmedIds.has(id)));
+    const gapAgeSeries=[
+      {name:"Sans première communion",values:bands.map((band)=>living.filter((person)=>nonCommunedIds.has(person.id)&&band.test(reportAgeAtEnd(person,reference)??-1)).length)},
+      {name:"Sans confirmation",values:bands.map((band)=>living.filter((person)=>nonConfirmedIds.has(person.id)&&band.test(reportAgeAtEnd(person,reference)??-1)).length)}
+    ];
+    reportLineChart(container.querySelector<HTMLElement>("#analytics-chart-gap-age")!,bands.map((band)=>band.label),gapAgeSeries);
     const male=living.filter((person)=>person.sexe==="masculin").length;
     const female=living.filter((person)=>person.sexe==="feminin").length;
     const genderDisplay=reportMask([male,female]);
@@ -658,6 +665,13 @@ async function mountPastoralAnalytics(container:HTMLElement,context:UserContext,
         reportMetricCard("Délai moyen",average===null?"—":average.toFixed(1)+" j",durations.length+" dossiers avec date d’émission");
     }
 
+    const duplicateKeys=new Map<string,number>();
+    for(const person of inScopeFaithful){
+      if(person.naissance_precision!=="exacte"||!person.naissance_jour||!person.naissance_mois||!person.naissance_annee)continue;
+      const key=(person.prenom+" "+person.nom).normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLocaleLowerCase("fr").replace(/\\s+/g," ").trim()+"|"+person.naissance_annee+"-"+person.naissance_mois+"-"+person.naissance_jour;
+      duplicateKeys.set(key,(duplicateKeys.get(key)??0)+1);
+    }
+    const duplicateGroups=[...duplicateKeys.values()].filter((count)=>count>1).length;
     const missingBirth=living.filter((person)=>person.naissance_precision==="inconnue"||!person.naissance_annee).length;
     const approximateBirth=living.filter((person)=>person.naissance_precision==="annee"||person.naissance_precision==="mois").length;
     const missingCommunity=inScopeFaithful.filter((person)=>!person.communaute_id||!communityMap.has(person.communaute_id)).length;
@@ -670,8 +684,25 @@ async function mountPastoralAnalytics(container:HTMLElement,context:UserContext,
       reportMetricCard("Références d’acte incomplètes",reportNumber(missingReferences),"N° d’acte ou page manquant"),
       reportMetricCard("Dates sacramentelles imprécises",reportNumber(approximateEvents),"Année, mois ou inconnue"),
       reportMetricCard("Dates au 01/01",reportNumber(suspiciousDefault),"À vérifier, pas automatiquement erronées"),
-      reportMetricCard("Fiches sans communauté valide",reportNumber(missingCommunity),"Dans le périmètre")
+      reportMetricCard("Fiches sans communauté valide",reportNumber(missingCommunity),"Dans le périmètre"),
+      reportMetricCard("Doublons potentiels",reportNumber(duplicateGroups),"Même identité et date de naissance exacte")
     ].join("");
+
+    const now=new Date();
+    function is25or50YearAnniversary(eventYear:number|null,eventMonth:number|null,eventDay:number|null,precision:string):boolean{
+      if(precision!=="exacte"||!eventYear||!eventMonth||!eventDay)return false;
+      let targetYear=now.getFullYear();
+      const nextDate=new Date(targetYear,eventMonth-1,eventDay,12);
+      if(nextDate<now){targetYear++;}
+      const elapsed=targetYear-eventYear;
+      return elapsed===25||elapsed===50;
+    }
+    const baptismJubilees=visibleSacraments.filter((row)=>row.type==="bapteme"&&is25or50YearAnniversary(row.annee,row.mois,row.jour,row.precision)&&scopeCommunityIds.has(row.communaute_historique_id)).length;
+    const marriageJubilees=visibleMarriages.filter((row)=>row.type==="novas_nuptias"&&is25or50YearAnniversary(row.annee,row.mois,row.jour,row.precision)&&scopeCommunityIds.has(row.communaute_historique_id)).length;
+    const jubileeValues=reportMask([baptismJubilees,marriageJubilees]);
+    container.querySelector<HTMLElement>("#analytics-jubilees")!.innerHTML=
+      reportMetricCard("Anniversaires de baptême",String(jubileeValues[0]),"25 ou 50 ans")+
+      reportMetricCard("Jubilés de mariage",String(jubileeValues[1]),"25 ou 50 ans");
 
     exportRows=[
       ["Indicateur","Valeur"],
