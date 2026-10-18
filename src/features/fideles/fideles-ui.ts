@@ -728,6 +728,17 @@ export async function mountFaithfulProfile(
   const livretNav = container.querySelector<HTMLElement>("#livret-nav");
   let currentBookletMarkup = "";
   let currentLivretView: "1" | "2" | "all" = "1";
+  let identityFontScale = 1;
+  const applyIdentityFontScale = (): void => {
+    const identityPage = livretStage?.querySelector<HTMLElement>(".livret-page.identity");
+    identityPage?.style.setProperty("--identity-font-scale", identityFontScale.toFixed(2));
+    const output = livretModal?.querySelector<HTMLOutputElement>("#livret-font-value");
+    if (output) output.textContent = Math.round(identityFontScale * 100) + "%";
+    const decrease = livretModal?.querySelector<HTMLButtonElement>("#livret-font-decrease");
+    const increase = livretModal?.querySelector<HTMLButtonElement>("#livret-font-increase");
+    if (decrease) decrease.disabled = identityFontScale <= 0.8;
+    if (increase) increase.disabled = identityFontScale >= 1.35;
+  };
   const setLivretView = (view: "1" | "2" | "all"): void => {
     currentLivretView = view;
     if (livretStage) livretStage.dataset.v = view;
@@ -748,6 +759,7 @@ export async function mountFaithfulProfile(
     livretStage.innerHTML = currentBookletMarkup ||
       '<div class="spread"><section class="livret-page">Le livret n’est pas encore disponible.</section></div>';
     setLivretView("1");
+    applyIdentityFontScale();
     livretModal.classList.remove("hidden");
     document.body.classList.add("overflow-hidden");
   };
@@ -769,6 +781,18 @@ export async function mountFaithfulProfile(
       const view = button.dataset.livretView;
       if (view === "1" || view === "2" || view === "all") setLivretView(view);
     });
+  });
+  livretModal?.querySelector<HTMLButtonElement>("#livret-font-decrease")?.addEventListener("click", () => {
+    identityFontScale = Math.max(0.8, Number((identityFontScale - 0.05).toFixed(2)));
+    applyIdentityFontScale();
+  });
+  livretModal?.querySelector<HTMLButtonElement>("#livret-font-increase")?.addEventListener("click", () => {
+    identityFontScale = Math.min(1.35, Number((identityFontScale + 0.05).toFixed(2)));
+    applyIdentityFontScale();
+  });
+  livretModal?.querySelector<HTMLButtonElement>("#livret-font-reset")?.addEventListener("click", () => {
+    identityFontScale = 1;
+    applyIdentityFontScale();
   });
   document.addEventListener("keydown", handleLivretKeydown);
   container.querySelector<HTMLButtonElement>("#close-livret-3d")?.addEventListener("click", closeLivret);
