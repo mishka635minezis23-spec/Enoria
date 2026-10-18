@@ -725,30 +725,51 @@ export async function mountFaithfulProfile(
   container.querySelector<HTMLButtonElement>("#faithful-back")?.addEventListener("click", navigateBackFromFaithful);
   const livretModal = container.querySelector<HTMLElement>("#livret-modal");
   const livretStage = container.querySelector<HTMLElement>("#livret-3d-container");
+  const livretNav = container.querySelector<HTMLElement>("#livret-nav");
   let currentBookletMarkup = "";
-  const setLivretView = (): void => {
-    if (livretStage) livretStage.dataset.v = "1";
+  let currentLivretView: "1" | "2" | "all" = "1";
+  const setLivretView = (view: "1" | "2" | "all"): void => {
+    currentLivretView = view;
+    if (livretStage) livretStage.dataset.v = view;
+    livretNav?.querySelectorAll<HTMLButtonElement>("[data-livret-view]").forEach((button) => {
+      const active = button.dataset.livretView === view;
+      button.classList.toggle("on", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
   };
   const closeLivret = (): void => {
     livretModal?.classList.add("hidden");
     if (livretStage) livretStage.innerHTML = "";
     document.body.classList.remove("overflow-hidden");
-    setLivretView();
+    setLivretView("1");
   };
   const openLivret = (): void => {
     if (!livretModal || !livretStage) return;
     livretStage.innerHTML = currentBookletMarkup ||
       '<div class="spread"><section class="livret-page">Le livret n’est pas encore disponible.</section></div>';
-    setLivretView();
+    setLivretView("1");
     livretModal.classList.remove("hidden");
     document.body.classList.add("overflow-hidden");
   };
   const handleLivretKeydown = (event: KeyboardEvent): void => {
-    if (livretModal && !livretModal.classList.contains("hidden") && event.key === "Escape") {
+    if (!livretModal || livretModal.classList.contains("hidden")) return;
+    if (event.key === "Escape") {
       event.preventDefault();
       closeLivret();
+    } else if (event.key === "ArrowRight" && currentLivretView === "1") {
+      event.preventDefault();
+      setLivretView("2");
+    } else if (event.key === "ArrowLeft" && currentLivretView === "2") {
+      event.preventDefault();
+      setLivretView("1");
     }
   };
+  livretNav?.querySelectorAll<HTMLButtonElement>("[data-livret-view]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const view = button.dataset.livretView;
+      if (view === "1" || view === "2" || view === "all") setLivretView(view);
+    });
+  });
   document.addEventListener("keydown", handleLivretKeydown);
   container.querySelector<HTMLButtonElement>("#close-livret-3d")?.addEventListener("click", closeLivret);
   container.querySelector<HTMLButtonElement>("#open-livret-3d")?.addEventListener("click", openLivret);
