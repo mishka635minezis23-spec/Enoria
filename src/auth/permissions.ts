@@ -7,7 +7,7 @@ const MODULE_ACCESS: Record<RouteKey, EnoriaRole[]> = {
   fideles: ["responsable", "secretaire", "cure"],
   sacrements: ["responsable", "secretaire", "cure"],
   dimes: ["secretaire", "cure"],
-  rapports: ["secretaire", "cure"],
+  rapports: ["responsable", "secretaire", "cure"],
   statistiques: ["responsable", "secretaire", "cure"],
   parametres: ["cure"]
 };
