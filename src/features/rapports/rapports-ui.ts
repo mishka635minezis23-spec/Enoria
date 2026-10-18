@@ -553,19 +553,37 @@ async function mountPastoralAnalytics(container:HTMLElement,context:UserContext,
     container.querySelector<HTMLElement>("#analytics-kpi-confirmation")!.textContent=reportNumber(confirmationCount);
     container.querySelector<HTMLElement>("#analytics-kpi-marriage")!.textContent=reportNumber(marriageCount);
 
-    const monthLabels=Array.from({length:12},(_,index)=>reportMonthLabel(index+1));
+    const periodStart=new Date(year.date_debut+"T12:00:00");
+    const periodEnd=new Date(year.date_fin+"T12:00:00");
+    const monthBuckets:{year:number;month:number;label:string}[]=[];
+    const monthCursor=new Date(periodStart.getFullYear(),periodStart.getMonth(),1);
+    while(monthCursor<=periodEnd&&monthBuckets.length<24){
+      monthBuckets.push({
+        year:monthCursor.getFullYear(),
+        month:monthCursor.getMonth()+1,
+        label:new Intl.DateTimeFormat("fr-CD",{month:"short",year:"2-digit"}).format(monthCursor).replace(".","")
+      });
+      monthCursor.setMonth(monthCursor.getMonth()+1);
+    }
+    const monthLabels=monthBuckets.map((bucket)=>bucket.label);
     const monthSeries=[
-      {name:"Baptêmes",values:Array(12).fill(0) as number[]},
-      {name:"Premières communions",values:Array(12).fill(0) as number[]},
-      {name:"Confirmations",values:Array(12).fill(0) as number[]},
-      {name:"Mariages",values:Array(12).fill(0) as number[]}
+      {name:"Baptêmes",values:Array(monthBuckets.length).fill(0) as number[]},
+      {name:"Premières communions",values:Array(monthBuckets.length).fill(0) as number[]},
+      {name:"Confirmations",values:Array(monthBuckets.length).fill(0) as number[]},
+      {name:"Mariages",values:Array(monthBuckets.length).fill(0) as number[]}
     ];
     for(const row of inScopeSacraments){
-      if(!row.mois||row.mois<1||row.mois>12)continue;
+      if(!row.annee||!row.mois)continue;
+      const bucket=monthBuckets.findIndex((item)=>item.year===row.annee&&item.month===row.mois);
+      if(bucket<0)continue;
       const index=row.type==="bapteme"?0:row.type==="eucharistie"?1:2;
-      monthSeries[index].values[row.mois-1]++;
+      monthSeries[index].values[bucket]++;
     }
-    for(const row of inScopeMarriages)if(row.mois&&row.mois>=1&&row.mois<=12)monthSeries[3].values[row.mois-1]++;
+    for(const row of inScopeMarriages){
+      if(!row.annee||!row.mois)continue;
+      const bucket=monthBuckets.findIndex((item)=>item.year===row.annee&&item.month===row.mois);
+      if(bucket>=0)monthSeries[3].values[bucket]++;
+    }
     reportLineChart(container.querySelector<HTMLElement>("#analytics-chart-monthly")!,monthLabels,monthSeries);
 
     const baptizedIds=new Set(visibleSacraments.filter((row)=>row.type==="bapteme"&&faithfulMap.get(row.fidele_id)?.statut==="vivant").map((row)=>row.fidele_id));
