@@ -999,7 +999,7 @@ export async function mountFaithfulProfile(
               ? partnerNames.get(record.conjoint_fidele_id) ?? record.conjoint_nom ?? ""
               : record?.conjoint_nom ?? "";
             return '<form class="marriage-editor mt-3 space-y-4 rounded-xl border border-amber-100 bg-amber-50/30 p-4" data-record-id="' + escapeHtml(id) + '" data-date-prefix="' + escapeHtml(prefix) + '" data-baptism-prefix="' + escapeHtml(spouseBirthPrefix) + '" data-death-prefix="' + escapeHtml(spouseDeathPrefix) + '">' +
-              '<div class="flex items-center justify-between gap-3"><h4 class="text-sm font-semibold text-slate-900">' + (record ? "Modifier l’événement matrimonial" : "Nouvel événement matrimonial") + '</h4><span class="text-[10px] text-slate-500">Mariage · liens de conjoints</span></div>' +
+              '<div class="flex items-center justify-between gap-3"><h4 class="text-sm font-semibold text-slate-900">' + (record ? "Modifier l’événement matrimonial" : "Nouvel événement matrimonial") + '</h4><span class="text-[10px] text-slate-500">Événement matrimonial</span></div>' +
               '<div class="grid gap-3 sm:grid-cols-2">' +
                 '<label class="' + fieldLabel + '">Nature de l’événement<select name="type" required class="' + fieldClass + '">' + typeOptions + '</select></label>' +
                 '<label class="' + fieldLabel + '">Nom du conjoint<input name="conjoint_nom" maxlength="160" value="' + escapeHtml(partnerName) + '" class="' + fieldClass + '" /></label>' +
