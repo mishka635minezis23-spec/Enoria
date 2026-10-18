@@ -668,7 +668,7 @@ async function mountPastoralAnalytics(container:HTMLElement,context:UserContext,
     const duplicateKeys=new Map<string,number>();
     for(const person of inScopeFaithful){
       if(person.naissance_precision!=="exacte"||!person.naissance_jour||!person.naissance_mois||!person.naissance_annee)continue;
-      const key=(person.prenom+" "+person.nom).normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLocaleLowerCase("fr").replace(/\\s+/g," ").trim()+"|"+person.naissance_annee+"-"+person.naissance_mois+"-"+person.naissance_jour;
+      const key=(person.prenom+" "+person.nom).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("fr").replace(/\s+/g," ").trim()+"|"+person.naissance_annee+"-"+person.naissance_mois+"-"+person.naissance_jour;
       duplicateKeys.set(key,(duplicateKeys.get(key)??0)+1);
     }
     const duplicateGroups=[...duplicateKeys.values()].filter((count)=>count>1).length;
