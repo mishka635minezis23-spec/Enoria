@@ -18,6 +18,12 @@
       #livret-modal .livret-nav { display:flex; flex:1 1 auto; align-items:center; justify-content:center; gap:.55vw; min-width:0; height:100%; }
       #livret-modal .livret-nav button { flex:1 1 0; min-width:0; max-width:32vw; height:72%; padding:0 .7em; border:1px solid #ffffff35; border-radius:4px; background:#ffffff12; color:#f7f6f2; font:inherit; cursor:pointer; white-space:nowrap; }
       #livret-modal .livret-nav button.on { background:#f1eee3; color:#252525; border-color:#f1eee3; }
+      #livret-modal .livret-font-controls { flex:0 0 auto; display:flex; align-items:center; gap:.28em; white-space:nowrap; }
+      #livret-modal .livret-font-label { color:#d8d7d1; font-size:.86em; }
+      #livret-modal .livret-font-controls button { min-width:2.15em; height:72%; padding:0 .42em; border:1px solid #ffffff35; border-radius:4px; background:#ffffff12; color:#f7f6f2; font:inherit; cursor:pointer; }
+      #livret-modal .livret-font-controls button:disabled { opacity:.35; cursor:not-allowed; }
+      #livret-modal #livret-font-value { min-width:3.5em; color:#fff; text-align:center; font-variant-numeric:tabular-nums; }
+      #livret-modal .livret-page.identity { font-size:calc(var(--f) * var(--identity-font-scale, 1)); }
       #livret-modal #close-livret-3d { flex:0 0 auto; height:72%; padding:0 1.1em; border:1px solid #ffffff55; border-radius:4px; background:#ffffff12; color:#fff; font:inherit; cursor:pointer; }
       #livret-modal #livret-3d-container { flex:1 1 auto; min-height:0; display:grid; grid-template-rows:minmax(0,1fr); gap:.8vh; overflow:hidden; }
       #livret-modal .spread { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.8vw; min-width:0; min-height:0; overflow:hidden; }
@@ -70,6 +76,13 @@
           <button type="button" data-livret-view="2">2 · Enfants · Dîmes</button>
           <button type="button" data-livret-view="all">Tout voir</button>
         </nav>
+        <div class="livret-font-controls" aria-label="Taille de police de la page IDENTITAS et des sacrements">
+          <span class="livret-font-label">Texte</span>
+          <button id="livret-font-decrease" type="button" aria-label="Réduire la taille de la police" title="Réduire la taille du texte">A−</button>
+          <output id="livret-font-value" aria-live="polite">100%</output>
+          <button id="livret-font-increase" type="button" aria-label="Augmenter la taille de la police" title="Augmenter la taille du texte">A+</button>
+          <button id="livret-font-reset" type="button" aria-label="Rétablir la taille normale" title="Rétablir 100%">↺</button>
+        </div>
         <button id="close-livret-3d" type="button">Fermer ✕</button>
       </header>
       <main id="livret-3d-container" data-v="1">
