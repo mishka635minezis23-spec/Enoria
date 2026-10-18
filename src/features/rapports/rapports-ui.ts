@@ -611,16 +611,21 @@ async function mountPastoralAnalytics(container:HTMLElement,context:UserContext,
       const usd=inScopeDimes.filter((row)=>row.devise==="USD").reduce((sum,row)=>sum+Number(row.montant),0);
       const fc=inScopeDimes.filter((row)=>row.devise==="FC").reduce((sum,row)=>sum+Number(row.montant),0);
       const payerCount=new Set(inScopeDimes.map((row)=>row.fidele_id)).size;
+      const maskDimeAmounts=payerCount>0&&payerCount<5;
       container.querySelector<HTMLElement>("#analytics-dime-summary")!.innerHTML=
-        reportMetricCard("Collecte USD",usd.toLocaleString("en-US",{maximumFractionDigits:2})+" $","Montant enregistré")+
-        reportMetricCard("Collecte FC",fc.toLocaleString("fr-CD",{maximumFractionDigits:0})+" FC","Montant enregistré");
+        reportMetricCard("Collecte USD",maskDimeAmounts?"Masqué (<5)":usd.toLocaleString("en-US",{maximumFractionDigits:2})+" $","Montant enregistré")+
+        reportMetricCard("Collecte FC",maskDimeAmounts?"Masqué (<5)":fc.toLocaleString("fr-CD",{maximumFractionDigits:0})+" FC","Montant enregistré");
       container.querySelector<HTMLElement>("#analytics-dime-note")!.textContent=reportNumber(payerCount)+" contributeurs distincts dans la période. Le taux de participation fiable nécessitera un effectif de référence historisé.";
       const dimeYears=years.slice().reverse();
-      const dimeSeries=["USD","FC"].map((currency)=>({name:currency,values:dimeYears.map((item)=>dimes.filter((row)=>row.annee_pastorale_id===item.id&&row.devise===currency&&scopeCommunityIds.has(faithfulMap.get(row.fidele_id)?.communaute_id??"")).reduce((sum,row)=>sum+Number(row.montant),0))}));
+      const dimeSeries=["USD","FC"].map((currency)=>({name:currency,values:dimeYears.map((item)=>{
+        const rows=dimes.filter((row)=>row.annee_pastorale_id===item.id&&row.devise===currency&&scopeCommunityIds.has(faithfulMap.get(row.fidele_id)?.communaute_id??""));
+        return new Set(rows.map((row)=>row.fidele_id)).size<5?0:rows.reduce((sum,row)=>sum+Number(row.montant),0);
+      })}));
       reportLineChart(container.querySelector<HTMLElement>("#analytics-chart-dimes")!,dimeYears.map((item)=>item.libelle),dimeSeries);
       container.querySelector<HTMLElement>("#analytics-dime-status")!.textContent="Disponible pour le curé et la secrétaire";
-      const signed=signatures.filter((row)=>row.annee_pastorale_id===year.id&&row.signee&&scopeCommunityIds.has(faithfulMap.get(row.fidele_id)?.communaute_id??""));
-      container.querySelector<HTMLElement>("#analytics-pascal")!.innerHTML=signatures.length
+      const selectedSignatures=signatures.filter((row)=>row.annee_pastorale_id===year.id&&scopeCommunityIds.has(faithfulMap.get(row.fidele_id)?.communaute_id??""));
+      const signed=selectedSignatures.filter((row)=>row.signee);
+      container.querySelector<HTMLElement>("#analytics-pascal")!.innerHTML=selectedSignatures.length
         ?reportMetricCard("Visas enregistrés",reportNumber(signed.length),"Année pastorale sélectionnée")
         :'<div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><p class="font-semibold text-amber-900">Données non disponibles</p><p class="mt-1 text-sm text-amber-800">Aucun visa pascal n’est actuellement enregistré. Enoria ne calcule donc pas de faux taux de participation.</p></div>';
       const selectedCertificates=certificates.filter((row)=>row.annee_pastorale_id===year.id);
