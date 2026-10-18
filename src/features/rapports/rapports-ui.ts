@@ -340,13 +340,26 @@ export async function mountReports(container:HTMLElement,context:UserContext,act
 
   const {data:years,error}=await db.from("annees_pastorales").select("id,libelle,active").eq("paroisse_id",parishId).order("libelle",{ascending:false});
   if(error)throw error;
-  year.innerHTML=(years??[]).map((item)=>'<option value="'+item.id+'">'+item.libelle+'</option>').join("")||'<option value="">Aucune année</option>';
+  year.replaceChildren(...(years??[]).map((item)=>{
+    const option=document.createElement("option");
+    option.value=item.id;
+    option.textContent=item.libelle;
+    return option;
+  }));
+  if(!years?.length){
+    const emptyOption=document.createElement("option");
+    emptyOption.value="";
+    emptyOption.textContent="Aucune année";
+    year.append(emptyOption);
+  }
   year.value=years?.some((item)=>item.id===activeYear?.id)?activeYear!.id:years?.find((item)=>item.active)?.id??years?.[0]?.id??"";
   calendarYear.value=String(new Date().getFullYear());
 
   function syncReportControls():void{
     const usesCalendarYear=type.value==="rapport_annuel"||type.value==="registre_baptemes";
     calendarWrap.classList.toggle("hidden",!usesCalendarYear);
+    const pastoralYearLabel=year.closest("label");
+    pastoralYearLabel?.classList.toggle("hidden",usesCalendarYear||type.value==="fideles");
     year.disabled=usesCalendarYear||type.value==="fideles";
   }
   type.addEventListener("change",syncReportControls);
