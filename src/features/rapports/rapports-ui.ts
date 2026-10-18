@@ -432,9 +432,6 @@ function reportAgeAtEnd(person:ReportFaithful,reference:Date):number|null{
   }
   return age>=0?age:null;
 }
-function reportMonthLabel(month:number):string{
-  return new Intl.DateTimeFormat("fr-CD",{month:"short"}).format(new Date(2020,month-1,1)).replace(".","");
-}
 function reportCsvDownload(rows:unknown[][],filename:string):void{
   const content="\uFEFF"+rows.map((row)=>row.map(csv).join(";")).join("\r\n");
   const url=URL.createObjectURL(new Blob([content],{type:"text/csv;charset=utf-8"}));
