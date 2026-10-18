@@ -333,6 +333,10 @@ type ReportCommunity = Pick<Tables<"communautes">,"id"|"nom"|"quartier_id">;
 type ReportQuartier = Pick<Tables<"quartiers">,"id"|"nom">;
 type ReportPastoralYear = Pick<Tables<"annees_pastorales">,"id"|"libelle"|"date_debut"|"date_fin"|"active">;
 
+function reportEsc(value:unknown):string{
+  const map:Record<string,string>={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"};
+  return String(value??"").replace(/[&<>"']/g,(char)=>map[char]??char);
+}
 async function fetchReportPages<T>(load:(from:number,to:number)=>Promise<{data:T[]|null;error:unknown}>):Promise<T[]>{
   const rows:T[]=[];
   let offset=0;
@@ -367,7 +371,7 @@ function reportBarList(node:HTMLElement,items:{label:string;value:number;detail?
   node.innerHTML=items.length?visible.map(({item,value})=>{
     const masked=typeof value==="string";
     const width=masked?0:Math.max(0,Math.min(100,item.value/max*100));
-    return '<div class="space-y-1.5"><div class="flex items-center justify-between gap-3 text-xs"><span class="min-w-0 truncate text-slate-700">'+esc(item.label)+'</span><span class="shrink-0 text-slate-500">'+(masked?value:item.value.toLocaleString("fr-CD"))+(item.detail?' · '+esc(item.detail):'')+'</span></div><div class="h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-[var(--enoria-green)]" style="width:'+width+'%"></div></div></div>';
+    return '<div class="space-y-1.5"><div class="flex items-center justify-between gap-3 text-xs"><span class="min-w-0 truncate text-slate-700">'+reportEsc(item.label)+'</span><span class="shrink-0 text-slate-500">'+(masked?value:item.value.toLocaleString("fr-CD"))+(item.detail?' · '+reportEsc(item.detail):'')+'</span></div><div class="h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-[var(--enoria-green)]" style="width:'+width+'%"></div></div></div>';
   }).join(""):'<p class="text-sm text-slate-400">Aucune donnée disponible.</p>';
 }
 function reportLineChart(node:HTMLElement,labels:string[],series:{name:string;values:number[]}[]):void{
@@ -397,13 +401,13 @@ function reportLineChart(node:HTMLElement,labels:string[],series:{name:string;va
     const dots=points.map((point)=>'<circle cx="'+x(point.position)+'" cy="'+y(point.value)+'" r="3.5" fill="'+colors[index%colors.length]+'"/>').join("");
     return lines+dots;
   }).join("");
-  const xLabels=labels.map((label,index)=>'<text x="'+x(index)+'" y="'+(height-12)+'" text-anchor="middle" fill="#64748B" font-size="10">'+esc(label)+'</text>').join("");
-  const legend=series.map((item,index)=>'<span class="inline-flex items-center gap-1.5 text-xs text-slate-500"><i class="inline-block h-2 w-2 rounded-full" style="background:'+colors[index%colors.length]+'"></i>'+esc(item.name)+'</span>').join("");
+  const xLabels=labels.map((label,index)=>'<text x="'+x(index)+'" y="'+(height-12)+'" text-anchor="middle" fill="#64748B" font-size="10">'+reportEsc(label)+'</text>').join("");
+  const legend=series.map((item,index)=>'<span class="inline-flex items-center gap-1.5 text-xs text-slate-500"><i class="inline-block h-2 w-2 rounded-full" style="background:'+colors[index%colors.length]+'"></i>'+reportEsc(item.name)+'</span>').join("");
   const hasPoints=series.some((item)=>item.values.some((value)=>value>=5));
   node.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Graphique linéaire" class="w-full overflow-visible">'+grid+seriesSvg+xLabels+'</svg><div class="mt-3 flex flex-wrap gap-x-4 gap-y-2">'+legend+'</div>'+(hasPoints?'':'<p class="mt-2 text-xs text-slate-400">Aucun point affichable : les valeurs sont nulles ou masquées car inférieures à cinq.</p>');
 }
 function reportMetricCard(label:string,value:string,sub:string):string{
-  return '<div class="rounded-xl bg-slate-50 p-3"><p class="text-xs text-slate-500">'+esc(label)+'</p><p class="mt-1 text-xl font-semibold text-slate-900">'+esc(value)+'</p><p class="mt-1 text-xs text-slate-400">'+esc(sub)+'</p></div>';
+  return '<div class="rounded-xl bg-slate-50 p-3"><p class="text-xs text-slate-500">'+reportEsc(label)+'</p><p class="mt-1 text-xl font-semibold text-slate-900">'+reportEsc(value)+'</p><p class="mt-1 text-xs text-slate-400">'+reportEsc(sub)+'</p></div>';
 }
 function reportAgeAtEnd(person:ReportFaithful,reference:Date):number|null{
   if(!person.naissance_annee||person.naissance_precision==="inconnue")return null;
@@ -417,10 +421,6 @@ function reportAgeAtEnd(person:ReportFaithful,reference:Date):number|null{
 }
 function reportMonthLabel(month:number):string{
   return new Intl.DateTimeFormat("fr-CD",{month:"short"}).format(new Date(2020,month-1,1)).replace(".","");
-}
-function reportDateYearMonth(year:number|null,month:number|null):string|null{
-  if(!year||!month||month<1||month>12)return null;
-  return String(year)+"-"+String(month).padStart(2,"0");
 }
 function reportCsvDownload(rows:unknown[][],filename:string):void{
   const content="\uFEFF"+rows.map((row)=>row.map(csv).join(";")).join("\r\n");
@@ -444,29 +444,28 @@ async function mountPastoralAnalytics(container:HTMLElement,context:UserContext,
   const refresh=container.querySelector<HTMLButtonElement>("#analytics-refresh")!;
   let exportRows:unknown[][]=[];
   const [years,communities,quartiers,faithful,sacraments,marriages]=await Promise.all([
-    fetchReportPages<ReportPastoralYear>((from,to)=>db.from("annees_pastorales").select("id,libelle,date_debut,date_fin,active").eq("paroisse_id",parishId).order("date_debut",{ascending:false}).range(from,to)),
-    fetchReportPages<ReportCommunity>((from,to)=>db.from("communautes").select("id,nom,quartier_id").eq("paroisse_id",parishId).order("nom").range(from,to)),
-    fetchReportPages<ReportQuartier>((from,to)=>db.from("quartiers").select("id,nom").eq("paroisse_id",parishId).order("nom").range(from,to)),
-    fetchReportPages<ReportFaithful>((from,to)=>db.from("fideles").select("id,sexe,statut,naissance_jour,naissance_mois,naissance_annee,naissance_precision,communaute_id").eq("paroisse_id",parishId).range(from,to)),
-    fetchReportPages<ReportSacrament>((from,to)=>db.from("sacrements").select("fidele_id,type,annee_pastorale_id,jour,mois,annee,precision,communaute_historique_id,reference_registre_requise,numero_acte,page_registre").eq("paroisse_id",parishId).range(from,to)),
-    fetchReportPages<ReportMarriage>((from,to)=>db.from("evenements_matrimoniaux").select("fidele_id,type,annee_pastorale_id,jour,mois,annee,precision,communaute_historique_id,numero_acte,page_registre").eq("paroisse_id",parishId).range(from,to))
+    fetchReportPages<ReportPastoralYear>(async (from,to)=>db.from("annees_pastorales").select("id,libelle,date_debut,date_fin,active").eq("paroisse_id",parishId).order("date_debut",{ascending:false}).range(from,to)),
+    fetchReportPages<ReportCommunity>(async (from,to)=>db.from("communautes").select("id,nom,quartier_id").eq("paroisse_id",parishId).order("nom").range(from,to)),
+    fetchReportPages<ReportQuartier>(async (from,to)=>db.from("quartiers").select("id,nom").eq("paroisse_id",parishId).order("nom").range(from,to)),
+    fetchReportPages<ReportFaithful>(async (from,to)=>db.from("fideles").select("id,sexe,statut,naissance_jour,naissance_mois,naissance_annee,naissance_precision,communaute_id").eq("paroisse_id",parishId).range(from,to)),
+    fetchReportPages<ReportSacrament>(async (from,to)=>db.from("sacrements").select("fidele_id,type,annee_pastorale_id,jour,mois,annee,precision,communaute_historique_id,reference_registre_requise,numero_acte,page_registre").eq("paroisse_id",parishId).range(from,to)),
+    fetchReportPages<ReportMarriage>(async (from,to)=>db.from("evenements_matrimoniaux").select("fidele_id,type,annee_pastorale_id,jour,mois,annee,precision,communaute_historique_id,numero_acte,page_registre").eq("paroisse_id",parishId).range(from,to))
   ]);
   const visibleCommunities=isClergyOrSecretary?communities:communities.filter((item)=>item.id===assignedCommunity);
-  const visibleCommunityIds=new Set(visibleCommunities.map((item)=>item.id));
-  const visibleFaithful=faithful.filter((person)=>isClergyOrSecretary||person.communaute_id===assignedCommunity);
+    const visibleFaithful=faithful.filter((person)=>isClergyOrSecretary||person.communaute_id===assignedCommunity);
   const visibleSacraments=sacraments.filter((item)=>isClergyOrSecretary||item.communaute_historique_id===assignedCommunity);
   const visibleMarriages=marriages.filter((item)=>isClergyOrSecretary||item.communaute_historique_id===assignedCommunity);
   const [dimes,signatures,certificates]=isClergyOrSecretary?await Promise.all([
-    fetchReportPages<ReportDime>((from,to)=>db.from("dimes").select("fidele_id,annee_pastorale_id,montant,devise").range(from,to)),
-    fetchReportPages<ReportSignature>((from,to)=>db.from("signatures").select("fidele_id,annee_pastorale_id,signee").range(from,to)),
-    fetchReportPages<ReportCertificate>((from,to)=>db.from("certificats").select("statut,date_demande,date_validation,date_emission,annee_pastorale_id").range(from,to))
+    fetchReportPages<ReportDime>(async (from,to)=>db.from("dimes").select("fidele_id,annee_pastorale_id,montant,devise").range(from,to)),
+    fetchReportPages<ReportSignature>(async (from,to)=>db.from("signatures").select("fidele_id,annee_pastorale_id,signee").range(from,to)),
+    fetchReportPages<ReportCertificate>(async (from,to)=>db.from("certificats").select("statut,date_demande,date_validation,date_emission,annee_pastorale_id").range(from,to))
   ]):[[],[],[]] as [ReportDime[],ReportSignature[],ReportCertificate[]];
 
-  const yearOptions=years.map((year)=>'<option value="'+esc(year.id)+'">'+esc(year.libelle)+(year.active?' · active':'')+'</option>').join("");
+  const yearOptions=years.map((year)=>'<option value="'+reportEsc(year.id)+'">'+reportEsc(year.libelle)+(year.active?' · active':'')+'</option>').join("");
   yearSelect.innerHTML=yearOptions||'<option value="">Aucune année pastorale</option>';
   yearSelect.value=years.some((year)=>year.id===activeYear?.id)?activeYear!.id:years.find((year)=>year.active)?.id??years[0]?.id??"";
-  quartierSelect.innerHTML='<option value="">Tous les quartiers</option>'+quartiers.map((item)=>'<option value="'+esc(item.id)+'">'+esc(item.nom)+'</option>').join("");
-  communitySelect.innerHTML='<option value="">Toutes les communautés</option>'+visibleCommunities.map((item)=>'<option value="'+esc(item.id)+'">'+esc(item.nom)+'</option>').join("");
+  quartierSelect.innerHTML='<option value="">Tous les quartiers</option>'+quartiers.map((item)=>'<option value="'+reportEsc(item.id)+'">'+reportEsc(item.nom)+'</option>').join("");
+  communitySelect.innerHTML='<option value="">Toutes les communautés</option>'+visibleCommunities.map((item)=>'<option value="'+reportEsc(item.id)+'">'+reportEsc(item.nom)+'</option>').join("");
   if(!isClergyOrSecretary){
     container.querySelector<HTMLElement>("#analytics-quartier-wrap")!.classList.add("hidden");
     container.querySelector<HTMLElement>("#analytics-community-wrap")!.classList.add("hidden");
