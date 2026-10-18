@@ -364,9 +364,9 @@ function reportMask(values:number[]):(number|string)[]{
 function reportNumber(value:number):string{
   return value>0&&value<5?"Masqué (<5)":value.toLocaleString("fr-CD");
 }
-function reportBarList(node:HTMLElement,items:{label:string;value:number;detail?:string}[]):void{
+function reportBarList(node:HTMLElement,items:{label:string;value:number;detail?:string;masked?:boolean}[]):void{
   const safe=reportMask(items.map((item)=>item.value));
-  const visible=items.map((item,index)=>({item,value:safe[index]}));
+  const visible=items.map((item,index)=>({item,value:item.masked?"Masqué (<5)":safe[index]}));
   const max=Math.max(1,...visible.filter((x)=>typeof x.value==="number").map((x)=>x.item.value));
   node.innerHTML=items.length?visible.map(({item,value})=>{
     const masked=typeof value==="string";
@@ -377,7 +377,18 @@ function reportBarList(node:HTMLElement,items:{label:string;value:number;detail?
 function reportLineChart(node:HTMLElement,labels:string[],series:{name:string;values:number[]}[]):void{
   const width=720,height=250,left=42,right=16,top=18,bottom=38;
   const plotWidth=width-left-right,plotHeight=height-top-bottom;
-  const visible=series.flatMap((item)=>item.values.filter((value)=>value>=5));
+  const maskedSeries=series.map((item)=>{
+    const hidden=new Set<number>();
+    item.values.forEach((value,index)=>{if(value>0&&value<5)hidden.add(index);});
+    if(hidden.size===1){
+      const secondary=item.values.map((value,index)=>({value,index}))
+        .filter((point)=>!hidden.has(point.index)&&point.value>0)
+        .sort((a,b)=>a.value-b.value)[0];
+      if(secondary)hidden.add(secondary.index);
+    }
+    return item.values.map((value,index)=>hidden.has(index)?0:value);
+  });
+  const visible=maskedSeries.flatMap((values)=>values.filter((value)=>value>=5));
   const max=Math.max(5,...visible);
   const x=(index:number)=>left+(labels.length<=1?plotWidth/2:index*plotWidth/(labels.length-1));
   const y=(value:number)=>top+plotHeight-(value/max)*plotHeight;
@@ -386,8 +397,8 @@ function reportLineChart(node:HTMLElement,labels:string[],series:{name:string;va
     const yy=top+plotHeight-ratio*plotHeight;
     return '<line x1="'+left+'" y1="'+yy+'" x2="'+(width-right)+'" y2="'+yy+'" stroke="#E8EDF2" stroke-width="1"/><text x="'+(left-8)+'" y="'+(yy+4)+'" text-anchor="end" fill="#94A3B8" font-size="10">'+Math.round(max*ratio)+'</text>';
   }).join("");
-  const seriesSvg=series.map((item,index)=>{
-    const points=item.values.map((value,position)=>({value,position})).filter((point)=>point.value>=5);
+  const seriesSvg=maskedSeries.map((values,index)=>{
+    const points=values.map((value,position)=>({value,position})).filter((point)=>point.value>=5);
     const segments:string[]=[];
     let current:string[]=[];
     let previous=-2;
@@ -403,7 +414,7 @@ function reportLineChart(node:HTMLElement,labels:string[],series:{name:string;va
   }).join("");
   const xLabels=labels.map((label,index)=>'<text x="'+x(index)+'" y="'+(height-12)+'" text-anchor="middle" fill="#64748B" font-size="10">'+reportEsc(label)+'</text>').join("");
   const legend=series.map((item,index)=>'<span class="inline-flex items-center gap-1.5 text-xs text-slate-500"><i class="inline-block h-2 w-2 rounded-full" style="background:'+colors[index%colors.length]+'"></i>'+reportEsc(item.name)+'</span>').join("");
-  const hasPoints=series.some((item)=>item.values.some((value)=>value>=5));
+  const hasPoints=maskedSeries.some((values)=>values.some((value)=>value>=5));
   node.innerHTML='<svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Graphique linéaire" class="w-full overflow-visible">'+grid+seriesSvg+xLabels+'</svg><div class="mt-3 flex flex-wrap gap-x-4 gap-y-2">'+legend+'</div>'+(hasPoints?'':'<p class="mt-2 text-xs text-slate-400">Aucun point affichable : les valeurs sont nulles ou masquées car inférieures à cinq.</p>');
 }
 function reportMetricCard(label:string,value:string,sub:string):string{
@@ -566,8 +577,12 @@ async function mountPastoralAnalytics(container:HTMLElement,context:UserContext,
     const baptizedScoped=journey[0].value;
     const notCommuned=Math.max(0,baptizedScoped-journey[1].value);
     const notConfirmed=Math.max(0,baptizedScoped-journey[2].value);
+    const hideEucharistForComplement=notCommuned>0&&notCommuned<5;
+    const hideConfirmationForComplement=notConfirmed>0&&notConfirmed<5;
     reportBarList(container.querySelector<HTMLElement>("#analytics-chart-funnel")!,[
-      ...journey,
+      {label:journey[0].label,value:journey[0].value,masked:hideEucharistForComplement||hideConfirmationForComplement},
+      {label:journey[1].label,value:journey[1].value,masked:hideEucharistForComplement},
+      {label:journey[2].label,value:journey[2].value,masked:hideConfirmationForComplement},
       {label:"Baptisés sans première communion (indicatif)",value:notCommuned},
       {label:"Baptisés sans confirmation (indicatif)",value:notConfirmed}
     ]);
@@ -585,9 +600,10 @@ async function mountPastoralAnalytics(container:HTMLElement,context:UserContext,
     reportBarList(container.querySelector<HTMLElement>("#analytics-chart-age")!,bands.map((band,index)=>({label:band.label,value:ageCounts[index]})));
     const male=living.filter((person)=>person.sexe==="masculin").length;
     const female=living.filter((person)=>person.sexe==="feminin").length;
+    const genderDisplay=reportMask([male,female]);
     container.querySelector<HTMLElement>("#analytics-gender-summary")!.innerHTML=
-      reportMetricCard("Hommes",reportNumber(male),"Fidèles vivants")+
-      reportMetricCard("Femmes",reportNumber(female),"Fidèles vivants");
+      reportMetricCard("Hommes",String(genderDisplay[0]),"Fidèles vivants")+
+      reportMetricCard("Femmes",String(genderDisplay[1]),"Fidèles vivants");
 
     const territoryCounts=visibleCommunities.filter((item)=>scopeCommunityIds.has(item.id)).map((community)=>({
       label:community.nom,value:living.filter((person)=>person.communaute_id===community.id).length,
