@@ -1,16 +1,118 @@
 <section class="space-y-6" data-reports>
-  <header><p class="text-xs font-semibold uppercase tracking-widest text-emerald-700">Éditions et exports</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Rapports</h1><p class="mt-1 text-sm text-slate-500">Produire les chiffres agrégés destinés à l'évêché et aux responsables, ainsi que les extraits nominatifs réservés au curé et à la secrétaire.</p></header>
+  <header>
+    <p class="text-xs font-semibold uppercase tracking-widest text-emerald-700">Pilotage pastoral</p>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Rapports paroissiaux</h1>
+    <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Vue d'ensemble chiffrée de la vie paroissiale : sacrements, parcours, démographie, territoires, dîmes et qualité des registres. Aucun nom dans les tableaux de bord.</p>
+  </header>
   <div id="reports-feedback" class="hidden rounded-lg p-3 text-sm" role="status"></div>
-  <article class="page-card p-5 sm:p-6">
-    <form id="report-form" class="space-y-4">
+
+  <article class="page-card p-5">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+      <div><h2 class="font-semibold text-slate-800">Périmètre d'analyse</h2><p class="mt-1 text-xs text-slate-500">Les chiffres sont recalculés selon les filtres et les droits du compte.</p></div>
+      <button id="analytics-refresh" type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700">Actualiser</button>
+    </div>
+    <div class="grid gap-3 md:grid-cols-3">
+      <label class="text-xs font-medium text-slate-600">Année pastorale<select id="analytics-year" class="mt-2 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="">Chargement…</option></select></label>
+      <label id="analytics-quartier-wrap" class="text-xs font-medium text-slate-600">Quartier<select id="analytics-quartier" class="mt-2 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="">Tous les quartiers</option></select></label>
+      <label id="analytics-community-wrap" class="text-xs font-medium text-slate-600">Communauté<select id="analytics-community" class="mt-2 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="">Toutes les communautés</option></select></label>
+    </div>
+  </article>
+
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <article class="page-card p-4"><p class="text-xs text-slate-500">Fidèles vivants</p><p id="analytics-kpi-faithful" class="mt-2 text-2xl font-semibold text-slate-900">—</p><p class="mt-1 text-xs text-slate-400">Effectif actuellement enregistré</p></article>
+    <article class="page-card p-4"><p class="text-xs text-slate-500">Baptêmes</p><p id="analytics-kpi-baptism" class="mt-2 text-2xl font-semibold text-slate-900">—</p><p class="mt-1 text-xs text-slate-400">Année pastorale choisie</p></article>
+    <article class="page-card p-4"><p class="text-xs text-slate-500">Premières communions</p><p id="analytics-kpi-eucharist" class="mt-2 text-2xl font-semibold text-slate-900">—</p><p class="mt-1 text-xs text-slate-400">Année pastorale choisie</p></article>
+    <article class="page-card p-4"><p class="text-xs text-slate-500">Confirmations</p><p id="analytics-kpi-confirmation" class="mt-2 text-2xl font-semibold text-slate-900">—</p><p class="mt-1 text-xs text-slate-400">Année pastorale choisie</p></article>
+    <article class="page-card p-4"><p class="text-xs text-slate-500">Mariages célébrés</p><p id="analytics-kpi-marriage" class="mt-2 text-2xl font-semibold text-slate-900">—</p><p class="mt-1 text-xs text-slate-400">Nouvelles unions enregistrées</p></article>
+  </div>
+
+  <div class="grid gap-4 xl:grid-cols-2">
+    <article class="page-card p-5">
+      <div class="flex flex-wrap items-start justify-between gap-2"><div><h2 class="font-semibold text-slate-800">Évolution mensuelle des sacrements</h2><p class="mt-1 text-xs text-slate-500">Baptêmes, premières communions, confirmations et mariages</p></div><span class="text-xs text-slate-400">Graphique linéaire</span></div>
+      <div id="analytics-chart-monthly" class="mt-4 min-h-64" aria-label="Évolution mensuelle des sacrements"></div>
+    </article>
+    <article class="page-card p-5">
+      <div><h2 class="font-semibold text-slate-800">Parcours sacramentel</h2><p class="mt-1 text-xs text-slate-500">Fidèles vivants ayant reçu chaque sacrement, toutes années confondues</p></div>
+      <div id="analytics-chart-funnel" class="mt-5 space-y-4"></div>
+      <p class="mt-3 text-xs leading-5 text-slate-400">Les étapes sont des effectifs distincts par fidèle, pas des taux de réussite d'une cohorte.</p>
+    </article>
+    <article class="page-card p-5">
+      <div><h2 class="font-semibold text-slate-800">Structure démographique</h2><p class="mt-1 text-xs text-slate-500">Fidèles vivants par tranche d'âge et sexe</p></div>
+      <div id="analytics-chart-age" class="mt-4"></div>
+      <div id="analytics-gender-summary" class="mt-4 grid grid-cols-2 gap-3"></div>
+      <div class="mt-5 border-t border-slate-100 pt-4"><h3 class="text-sm font-semibold text-slate-700">Baptisés en attente par tranche d'âge</h3><div id="analytics-chart-gap-age" class="mt-3 space-y-3"></div></div>
+    </article>
+    <article class="page-card p-5">
+      <div><h2 class="font-semibold text-slate-800">Répartition territoriale</h2><p class="mt-1 text-xs text-slate-500">Effectifs par communauté, selon le périmètre sélectionné</p></div>
+      <div id="analytics-chart-territory" class="mt-4 space-y-3"></div>
+    </article>
+    <article class="page-card p-5 xl:col-span-2">
+      <div><h2 class="font-semibold text-slate-800">Cohortes de baptême</h2><p class="mt-1 text-xs text-slate-500">Pour chaque année de baptême : combien ont ensuite reçu la première communion et la confirmation ?</p></div>
+      <div id="analytics-chart-cohort" class="mt-4 min-h-64"></div>
+      <p class="mt-3 text-xs leading-5 text-slate-400">Calcul sur les années de célébration connues. Les dossiers sans année exploitable sont exclus ; une même personne n'est comptée qu'une fois par étape.</p>
+    </article>
+  </div>
+
+  <div class="grid gap-4 lg:grid-cols-2">
+    <article class="page-card p-5">
+      <div><h2 class="font-semibold text-slate-800">Dîmes et contributions</h2><p class="mt-1 text-xs text-slate-500">Montants conservés séparément par devise, sans conversion artificielle</p></div>
+      <div id="analytics-dime-summary" class="mt-4 grid grid-cols-2 gap-3"></div>
+      <div id="analytics-chart-dimes" class="mt-4 space-y-3"></div>
+      <p id="analytics-dime-note" class="mt-3 text-xs leading-5 text-slate-400"></p>
+    </article>
+    <article class="page-card p-5">
+      <div><h2 class="font-semibold text-slate-800">Devoir pascal</h2><p class="mt-1 text-xs text-slate-500">Participation enregistrée par année pastorale</p></div>
+      <div id="analytics-pascal" class="mt-5"></div>
+      <p class="mt-3 text-xs leading-5 text-slate-400">La dîme ne remplace pas le visa pascal. Aucun taux ne sera calculé sans enregistrement des signatures.</p>
+    </article>
+    <article class="page-card p-5">
+      <div><h2 class="font-semibold text-slate-800">Jubilés et anniversaires</h2><p class="mt-1 text-xs text-slate-500">Anniversaires de baptême et jubilés de mariage de 25 ou 50 ans dans les douze prochains mois</p></div>
+      <div id="analytics-jubilees" class="mt-4 grid grid-cols-2 gap-3"></div>
+    </article>
+    <article class="page-card p-5">
+      <div><h2 class="font-semibold text-slate-800">Qualité des registres</h2><p class="mt-1 text-xs text-slate-500">Contrôles de complétude et de cohérence sur les données accessibles</p></div>
+      <div id="analytics-quality" class="mt-4 grid gap-3 sm:grid-cols-2"></div>
+    </article>
+    <article class="page-card p-5">
+      <div><h2 class="font-semibold text-slate-800">Certificats et duplicatas</h2><p class="mt-1 text-xs text-slate-500">Volume des demandes, états de traitement et délai moyen</p></div>
+      <div id="analytics-certificates" class="mt-4 grid grid-cols-2 gap-3"></div>
+    </article>
+  </div>
+
+  <article class="page-card p-5">
+    <div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="font-semibold text-slate-800">Exporter la synthèse chiffrée</h2><p class="mt-1 text-xs text-slate-500">CSV agrégé correspondant aux filtres actifs. Aucun nom n'est exporté.</p></div><button id="analytics-export" type="button" class="rounded-lg bg-[var(--enoria-green)] px-4 py-2.5 text-xs font-semibold text-white">Exporter les indicateurs CSV</button></div>
+  </article>
+
+  <article class="page-card p-5">
+    <h2 class="font-semibold text-slate-800">Catalogue des rapports paroissiaux</h2>
+    <p class="mt-1 text-xs text-slate-500">Les rapports sont organisés par besoin de décision, pas par liste de personnes.</p>
+    <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div class="rounded-xl border border-slate-100 p-4"><p class="text-sm font-semibold text-slate-800">1. Rapport annuel pour l'évêché</p><p class="mt-1 text-xs leading-5 text-slate-500">Volumes sacramentels, sexe, âge et évolution annuelle.</p><span class="mt-2 inline-block text-xs font-medium text-emerald-700">Disponible en export</span></div>
+      <div class="rounded-xl border border-slate-100 p-4"><p class="text-sm font-semibold text-slate-800">2. Registre chronologique des baptêmes</p><p class="mt-1 text-xs leading-5 text-slate-500">Extrait nominatif réservé au curé et à la secrétaire.</p><span class="mt-2 inline-block text-xs font-medium text-emerald-700">Disponible en export sécurisé</span></div>
+      <div class="rounded-xl border border-slate-100 p-4"><p class="text-sm font-semibold text-slate-800">3. Parcours sacramentel</p><p class="mt-1 text-xs leading-5 text-slate-500">Baptisés non communiés, non confirmés et progression des étapes.</p><span class="mt-2 inline-block text-xs font-medium text-emerald-700">Disponible en synthèse</span></div>
+      <div class="rounded-xl border border-slate-100 p-4"><p class="text-sm font-semibold text-slate-800">4. Entonnoir par cohorte</p><p class="mt-1 text-xs leading-5 text-slate-500">Suivi des cohortes selon l'année de baptême.</p><span class="mt-2 inline-block text-xs font-medium text-emerald-700">Disponible en graphique</span></div>
+      <div class="rounded-xl border border-slate-100 p-4"><p class="text-sm font-semibold text-slate-800">5. Dîmes par année et devise</p><p class="mt-1 text-xs leading-5 text-slate-500">Montants USD et FC, nombre de contributeurs et évolution.</p><span id="analytics-dime-status" class="mt-2 inline-block text-xs font-medium text-slate-500">Selon autorisations</span></div>
+      <div class="rounded-xl border border-slate-100 p-4"><p class="text-sm font-semibold text-slate-800">6. Participation au devoir pascal</p><p class="mt-1 text-xs leading-5 text-slate-500">Taux par territoire et évolution annuelle des visas.</p><span class="mt-2 inline-block text-xs font-medium text-amber-700">À alimenter : aucun visa enregistré</span></div>
+      <div class="rounded-xl border border-slate-100 p-4"><p class="text-sm font-semibold text-slate-800">7. Audit de qualité des données</p><p class="mt-1 text-xs leading-5 text-slate-500">Dates imprécises, références absentes et incohérences détectables.</p><span class="mt-2 inline-block text-xs font-medium text-emerald-700">Disponible en synthèse</span></div>
+      <div class="rounded-xl border border-slate-100 p-4"><p class="text-sm font-semibold text-slate-800">8. Certificats et duplicatas</p><p class="mt-1 text-xs leading-5 text-slate-500">Demandes, validation, émission et délais de traitement.</p><span class="mt-2 inline-block text-xs font-medium text-slate-500">Selon autorisations</span></div>
+      <div class="rounded-xl border border-slate-100 p-4"><p class="text-sm font-semibold text-slate-800">9. Jubilés et anniversaires</p><p class="mt-1 text-xs leading-5 text-slate-500">Anniversaires de baptême et jubilés de mariage de 25 et 50 ans.</p><span class="mt-2 inline-block text-xs font-medium text-amber-700">Partiel : dépend des dates exactes</span></div>
+      <div class="rounded-xl border border-slate-100 p-4"><p class="text-sm font-semibold text-slate-800">10. Chronologie individuelle</p><p class="mt-1 text-xs leading-5 text-slate-500">Parcours complet accessible depuis la fiche du fidèle.</p><span class="mt-2 inline-block text-xs font-medium text-emerald-700">Disponible dans la fiche</span></div>
+    </div>
+    <p class="mt-4 rounded-lg bg-slate-50 p-3 text-xs leading-5 text-slate-500">Structure territoriale actuellement connue par la base : paroisse → quartier → communauté. Les niveaux « CV » et « groupe de vie spirituelle » ne sont pas encore des entités distinctes dans le schéma Supabase ; ils ne seront pas inventés ni confondus sans clarification de l'organisation réelle.</p>
+  </article>
+
+  <details class="page-card p-5">
+    <summary class="cursor-pointer font-semibold text-slate-800">Exports administratifs nominatifs (accès restreint)</summary>
+    <p class="mt-2 text-sm leading-6 text-slate-500">Ces extractions ne sont pas des rapports de pilotage. Elles servent uniquement aux opérations de secrétariat et à la tenue des registres.</p>
+    <div id="reports-feedback-nominal" class="hidden rounded-lg p-3 text-sm" role="status"></div>
+    <form id="report-form" class="mt-4 space-y-4">
       <div class="grid gap-4 sm:grid-cols-2">
-        <label class="text-xs font-medium text-slate-600">Type de rapport<select id="report-type" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="rapport_annuel">Rapport annuel pour l'évêché</option><option value="registre_baptemes">Extrait chronologique des baptêmes</option><option value="fideles">Liste des fidèles</option><option value="sacrements">Registre des sacrements</option><option value="mariages">Événements matrimoniaux</option><option value="dimes">Registre des dîmes</option></select></label>
-        <label class="text-xs font-medium text-slate-600"><span id="report-year-label">Année pastorale</span><select id="report-year" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="">Chargement…</option></select></label>
+        <label class="text-xs font-medium text-slate-600">Type d'extraction<select id="report-type" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="rapport_annuel">Rapport annuel pour l'évêché</option><option value="registre_baptemes">Extrait chronologique des baptêmes</option><option value="fideles">Liste des fidèles</option><option value="sacrements">Registre des sacrements</option><option value="mariages">Événements matrimoniaux</option><option value="dimes">Registre des dîmes</option></select></label>
+        <label class="text-xs font-medium text-slate-600"><span>Année pastorale</span><select id="report-year" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="">Chargement…</option></select></label>
         <label id="report-calendar-year-wrap" class="hidden text-xs font-medium text-slate-600">Année civile<input id="report-calendar-year" type="number" min="1900" max="2100" step="1" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm" /></label>
       </div>
       <div class="rounded-lg border border-amber-200 bg-amber-50 p-4"><p class="text-sm font-semibold text-amber-900">Protection des données</p><p class="mt-1 text-xs leading-5 text-amber-800">Les fichiers peuvent contenir des informations personnelles et religieuses. Exporte uniquement les données nécessaires et conserve le fichier sur un poste protégé.</p></div>
       <button id="report-export" type="submit" class="rounded-lg bg-[var(--enoria-green)] px-4 py-2.5 text-sm font-semibold text-white">Générer le fichier CSV</button>
     </form>
-  </article>
-  <article class="page-card p-5"><h2 class="font-semibold text-slate-800">Certificats et duplicatas</h2><p class="mt-2 text-sm leading-6 text-slate-500">Les demandes sont consultables dans la fiche individuelle. La génération d'un duplicata PDF sera activée uniquement après validation explicite du curé et vérification des références du registre papier.</p></article>
+  </details>
 </section>
