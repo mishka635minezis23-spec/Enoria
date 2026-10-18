@@ -74,7 +74,7 @@ function renderLineChart(node:HTMLElement,labels:string[],series:DimeSeries[],em
   const width=740,height=270,left=46,right=18,top=18,bottom=40;
   const plotWidth=width-left-right,plotHeight=height-top-bottom;
   const plotted=series.flatMap((item)=>item.values.filter((value):value is number=>value!==null));
-  if(!plotted.length){
+  if(!plotted.length||plotted.every((value)=>value===0)){
     node.innerHTML='<div class="flex min-h-56 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 px-5 text-center"><p class="text-sm font-medium text-slate-600">Pas encore de courbe exploitable</p><p class="mt-2 max-w-xl text-xs leading-5 text-slate-400">'+escapeHtml(emptyMessage)+'</p></div>';
     return;
   }
@@ -299,20 +299,23 @@ export async function mountDimesPage(container:HTMLElement,context:UserContext,a
     const payerByWard=new Map(payerGrid.map((item)=>[item.key,item]));
     const monthlyTotals=Array(months.length).fill(0) as number[];
     const monthlyPayers=Array.from({length:months.length},()=>new Set<string>());
+    const monthlyCurrencyPayers=Array.from({length:months.length},()=>new Set<string>());
     for(const row of inPeriodRows){
       const month=monthIndex.get(dateMonthKey(row.date_paiement!));
       if(month===undefined)continue;
       monthlyPayers[month].add(row.fidele_id);
-      if(row.devise===currency)monthlyTotals[month]+=Number(row.montant);
+      if(row.devise===currency){
+        monthlyTotals[month]+=Number(row.montant);
+        monthlyCurrencyPayers[month].add(row.fidele_id);
+      }
       const key=getWardKey(row);
       const amountGroup=amountByWard.get(key);
       const payerGroup=payerByWard.get(key);
-      if(amountGroup){
-        amountGroup.values[month]+=row.devise===currency?Number(row.montant):0;
+      if(amountGroup&&row.devise===currency){
+        amountGroup.values[month]+=Number(row.montant);
         amountGroup.payers[month].add(row.fidele_id);
       }
       if(payerGroup){
-        payerGroup.values[month]=payerGroup.payers[month].size+1;
         payerGroup.payers[month].add(row.fidele_id);
         payerGroup.values[month]=payerGroup.payers[month].size;
       }
@@ -320,7 +323,7 @@ export async function mountDimesPage(container:HTMLElement,context:UserContext,a
     const currencyLabel=currency==="USD"?"USD":"FC";
     container.querySelector<HTMLElement>("#dimes-monthly-subtitle")!.textContent="Montants mensuels en "+currencyLabel+" · date réelle du versement";
     const monthLabels=months.map((item)=>item.label);
-    const makeMaskedSeries=(grid:typeof amountGrid,counts:boolean):DimeSeries[]=>{
+    const makeMaskedSeries=(grid:typeof amountGrid):DimeSeries[]=>{
       const hiddenByMonth=months.map((_,month)=>{
         const values=grid.map((item)=>item.payers[month].size);
         return maskContributors(values);
@@ -329,10 +332,10 @@ export async function mountDimesPage(container:HTMLElement,context:UserContext,a
         label:item.label,
         color:PALETTE[index%PALETTE.length],
         values:item.values.map((value,month)=>hiddenByMonth[month].has(index)?null:value)
-      })).filter((item)=>item.values.some((value)=>value!==null));
+      })).filter((item,index)=>grid[index].payers.some((payers)=>payers.size>0));
     };
-    const amountSeries=makeMaskedSeries(amountGrid,false);
-    const payerSeries=makeMaskedSeries(payerGrid,true);
+    const amountSeries=makeMaskedSeries(amountGrid);
+    const payerSeries=makeMaskedSeries(payerGrid);
     renderLineChart(
       container.querySelector<HTMLElement>("#dimes-monthly-chart")!,
       monthLabels,amountSeries,
@@ -385,15 +388,15 @@ export async function mountDimesPage(container:HTMLElement,context:UserContext,a
       ...months.map((month,index)=>[
         month.label,
         month.key,
-        monthlyTotals[index]>0&&monthlyPayers[index].size<5?"Masqué (<5)":money(monthlyTotals[index],currency),
-        monthlyPayers[index].size>0&&monthlyPayers[index].size<5?"Masqué (<5)":monthlyPayers[index].size
+        monthlyCurrencyPayers[index].size>0&&monthlyCurrencyPayers[index].size<5?"Masqué (<5)":money(monthlyTotals[index],currency),
+        monthlyCurrencyPayers[index].size>0&&monthlyCurrencyPayers[index].size<5?"Masqué (<5)":monthlyCurrencyPayers[index].size
       ]),
       [],
       ["Méthode","Les courbes mensuelles n'utilisent que date_paiement, jamais created_at."],
       ["Confidentialité","Les groupes de 1 à 4 contributeurs sont masqués dans les comparaisons."]
     ];
     // Rebuild monthly export safely by masking each month and one complementary month if needed.
-    const monthlyHidden=maskContributors(monthlyPayers.map((set)=>set.size));
+    const monthlyHidden=maskContributors(monthlyCurrencyPayers.map((set)=>set.size));
     for(let index=0;index<months.length;index++){
       const rowIndex=exportRows.findIndex((row)=>row[0]==="Évolution mensuelle") + 1 + index;
       if(rowIndex>0&&rowIndex<exportRows.length&&monthlyHidden.has(index)){
