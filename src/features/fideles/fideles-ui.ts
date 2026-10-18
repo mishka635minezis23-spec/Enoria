@@ -1169,27 +1169,18 @@ export async function mountFaithfulProfile(
             const typeControl = record
               ? '<input type="hidden" name="type" value="' + record.type + '" /><span class="rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold">' + escapeHtml(sacramentLabels[record.type]) + '</span>'
               : '<label class="' + fieldLabel + '">Sacrement<select name="type" required class="' + fieldClass + '">' + availableTypes.map((type) => '<option value="' + type + '">' + escapeHtml(sacramentLabels[type]) + '</option>').join("") + '</select></label>';
-            const yearsHtml = years.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(record?.annee_pastorale_id,item.id) + '>' + escapeHtml(item.libelle) + '</option>').join("");
-            const recordQuartierId = communities.find((item) => item.id === record?.communaute_historique_id)?.quartier_id ?? "";
-            const quartiersHtml = '<option value="">Choisir un quartier…</option>' + quartiers.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(recordQuartierId,item.id) + '>' + escapeHtml(item.nom) + '</option>').join("");
-            const communitiesHtml = '<option value="">Choisir une communauté…</option>' + communities.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(record?.communaute_historique_id,item.id) + '>' + escapeHtml(item.nom) + '</option>').join("");
             return '<form class="sacrament-editor mt-3 space-y-4 rounded-xl border border-emerald-100 bg-emerald-50/30 p-4" data-record-id="' + escapeHtml(id) + '" data-date-prefix="' + escapeHtml(prefix) + '">' +
               '<div class="flex items-center justify-between gap-3"><h4 class="text-sm font-semibold text-slate-900">' + (record ? "Modifier " + escapeHtml(sacramentLabels[record.type]) : "Nouveau sacrement") + '</h4><span class="text-[10px] text-slate-500">' + (record ? "Modification" : "Création") + '</span></div>' +
-              '<div class="grid gap-3 sm:grid-cols-2">' +
-                '<label class="' + fieldLabel + '">Quartier *<select name="quartier_id" required class="' + fieldClass + '">' + quartiersHtml + '</select></label>' +
-                '<label class="' + fieldLabel + '">Communauté de célébration *<select name="communaute_historique_id" required class="' + fieldClass + '">' + communitiesHtml + '</select></label></div>' +
               '<div class="grid gap-3 sm:grid-cols-2">' + typeControl +
-                '<label class="' + fieldLabel + '">Année pastorale<select name="annee_pastorale_id" required class="' + fieldClass + '">' + yearsHtml + '</select></label></div>' +
+                '<div class="text-xs text-slate-500 flex items-center">Année pastorale déterminée automatiquement à partir de la date.</div></div>' +
               '<div><p class="mb-2 text-xs font-semibold text-slate-600">Date du sacrement</p>' + partialDateFields(prefix) + '</div>' +
               '<div class="grid gap-3 sm:grid-cols-2">' +
                 '<label class="' + fieldLabel + '">Lieu<input name="lieu" maxlength="160" value="' + escapeHtml(record?.lieu ?? "") + '" class="' + fieldClass + '" /></label>' +
                 '<label class="' + fieldLabel + '">Ministre<input name="ministre" maxlength="160" value="' + escapeHtml(record?.ministre ?? "") + '" class="' + fieldClass + '" /></label>' +
                 '<label class="' + fieldLabel + '">Numéro d’acte<input name="numero_acte" maxlength="80" value="' + escapeHtml(record?.numero_acte ?? "") + '" class="' + fieldClass + '" /></label>' +
-                '<label class="' + fieldLabel + '">Page du registre<input name="page_registre" maxlength="80" value="' + escapeHtml(record?.page_registre ?? "") + '" class="' + fieldClass + '" /></label>' +
-                '<label class="' + fieldLabel + '">Parrain<input name="parrain" maxlength="160" value="' + escapeHtml(record?.parrain ?? "") + '" class="' + fieldClass + '" /></label>' +
-                '<label class="' + fieldLabel + '">Marraine<input name="marraine" maxlength="160" value="' + escapeHtml(record?.marraine ?? "") + '" class="' + fieldClass + '" /></label>' +
+                '<label class="' + fieldLabel + '">Parrain/marraine<input name="parrain_marraine" maxlength="160" value="' + escapeHtml([record?.parrain, record?.marraine].filter((value) => Boolean(value?.trim())).join(" / ")) + '" class="' + fieldClass + '" /></label>' +
                 '<label class="' + fieldLabel + ' sm:col-span-2">Visa / observation<input name="visa" maxlength="200" value="' + escapeHtml(record?.visa ?? "") + '" class="' + fieldClass + '" /></label>' +
-              '</div><p class="text-[11px] leading-5 text-slate-500">Le numéro d’acte et la page sont obligatoires pour le baptême. Le parrain et la marraine sont enregistrés directement sur ce sacrement.</p>' +
+              '</div><p class="text-[11px] leading-5 text-slate-500">La communauté et l’année pastorale sont renseignées automatiquement à partir du dossier et de la date de célébration. La page du registre n’est pas demandée.</p>' +
               '<p class="editor-feedback hidden rounded-lg p-3 text-sm" role="status"></p>' +
               '<div class="flex justify-end gap-2"><button type="button" data-cancel-editor class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600">Annuler</button><button type="submit" class="rounded-lg bg-[var(--enoria-green)] px-4 py-2 text-xs font-semibold text-white">Enregistrer</button></div></form>';
           };
@@ -1206,38 +1197,27 @@ export async function mountFaithfulProfile(
               ["obiit_conjux","Décès du conjoint"]
             ];
             const typeOptions = eventTypes.map(([value,label]) => '<option value="' + value + '" ' + selected(record?.type,value) + '>' + label + '</option>').join("");
-            const yearsHtml = years.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(record?.annee_pastorale_id,item.id) + '>' + escapeHtml(item.libelle) + '</option>').join("");
-            const recordQuartierId = communities.find((item) => item.id === record?.communaute_historique_id)?.quartier_id ?? "";
-            const quartiersHtml = '<option value="">Choisir un quartier…</option>' + quartiers.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(recordQuartierId,item.id) + '>' + escapeHtml(item.nom) + '</option>').join("");
-            const communitiesHtml = '<option value="">Choisir une communauté…</option>' + communities.map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(record?.communaute_historique_id,item.id) + '>' + escapeHtml(item.nom) + '</option>').join("");
-            const partnerHtml = '<option value="">Aucun dossier lié · nom libre</option>' + partners
-              .filter((item) => item.id !== faithfulRecord.id)
-              .map((item) => '<option value="' + escapeHtml(item.id) + '" ' + selected(record?.conjoint_fidele_id,item.id) + '>' + escapeHtml(item.prenom + " " + item.nom) + '</option>').join("");
             const partnerName = record?.conjoint_fidele_id
               ? partnerNames.get(record.conjoint_fidele_id) ?? record.conjoint_nom ?? ""
               : record?.conjoint_nom ?? "";
             return '<form class="marriage-editor mt-3 space-y-4 rounded-xl border border-amber-100 bg-amber-50/30 p-4" data-record-id="' + escapeHtml(id) + '" data-date-prefix="' + escapeHtml(prefix) + '" data-baptism-prefix="' + escapeHtml(spouseBirthPrefix) + '" data-death-prefix="' + escapeHtml(spouseDeathPrefix) + '">' +
               '<div class="flex items-center justify-between gap-3"><h4 class="text-sm font-semibold text-slate-900">' + (record ? "Modifier l’événement matrimonial" : "Nouvel événement matrimonial") + '</h4><span class="text-[10px] text-slate-500">Mariage · liens de conjoints</span></div>' +
               '<div class="grid gap-3 sm:grid-cols-2">' +
-                '<label class="' + fieldLabel + '">Quartier *<select name="quartier_id" required class="' + fieldClass + '">' + quartiersHtml + '</select></label>' +
-                '<label class="' + fieldLabel + '">Communauté de l’événement *<select name="communaute_historique_id" required class="' + fieldClass + '">' + communitiesHtml + '</select></label>' +
                 '<label class="' + fieldLabel + '">Nature de l’événement<select name="type" required class="' + fieldClass + '">' + typeOptions + '</select></label>' +
-                '<label class="' + fieldLabel + '">Année pastorale<select name="annee_pastorale_id" required class="' + fieldClass + '">' + yearsHtml + '</select></label>' +
-                '<label class="' + fieldLabel + '">Lier au dossier d’un fidèle<select name="conjoint_fidele_id" class="' + fieldClass + '">' + partnerHtml + '</select></label>' +
-                '<label class="' + fieldLabel + ' sm:col-span-2">Nom du conjoint<input name="conjoint_nom" maxlength="160" value="' + escapeHtml(partnerName) + '" class="' + fieldClass + '" placeholder="À utiliser si le conjoint n’est pas inscrit dans la paroisse" /></label>' +
+                '<label class="' + fieldLabel + '">Nom du conjoint<input name="conjoint_nom" maxlength="160" value="' + escapeHtml(partnerName) + '" class="' + fieldClass + '" /></label>' +
+                '<div class="text-xs text-slate-500 flex items-center">Année pastorale déterminée automatiquement à partir de la date.</div>' +
               '</div>' +
               '<div><p class="mb-2 text-xs font-semibold text-slate-600">Date de l’événement matrimonial</p>' + partialDateFields(prefix) + '</div>' +
               '<div class="grid gap-3 sm:grid-cols-2">' +
                 '<label class="' + fieldLabel + '">Lieu<input name="lieu" maxlength="160" value="' + escapeHtml(record?.lieu ?? "") + '" class="' + fieldClass + '" /></label>' +
                 '<label class="' + fieldLabel + '">Ministre<input name="ministre" maxlength="160" value="' + escapeHtml(record?.ministre ?? "") + '" class="' + fieldClass + '" /></label>' +
                 '<label class="' + fieldLabel + '">Numéro d’acte<input name="numero_acte" maxlength="80" value="' + escapeHtml(record?.numero_acte ?? "") + '" class="' + fieldClass + '" /></label>' +
-                '<label class="' + fieldLabel + '">Page du registre<input name="page_registre" maxlength="80" value="' + escapeHtml(record?.page_registre ?? "") + '" class="' + fieldClass + '" /></label>' +
                 '<label class="' + fieldLabel + ' sm:col-span-2">Lieu de baptême du conjoint<input name="conjoint_lieu_bapteme" maxlength="160" value="' + escapeHtml(record?.conjoint_lieu_bapteme ?? "") + '" class="' + fieldClass + '" /></label>' +
                 '<label class="' + fieldLabel + ' sm:col-span-2">Visa / observation<input name="visa" maxlength="200" value="' + escapeHtml(record?.visa ?? "") + '" class="' + fieldClass + '" /></label>' +
               '</div>' +
               '<div class="rounded-lg border border-slate-200 bg-white p-3"><p class="mb-2 text-xs font-semibold text-slate-700">Baptême du conjoint</p>' + partialDateFields(spouseBirthPrefix) + '</div>' +
               '<fieldset data-spouse-death-fields ' + (record?.type === "obiit_conjux" ? "" : "disabled") + ' class="rounded-lg border border-slate-200 bg-white p-3"><p class="mb-2 text-xs font-semibold text-slate-700">Date de décès du conjoint (si événement de décès)</p>' + partialDateFields(spouseDeathPrefix) + '</fieldset>' +
-              '<p class="text-[11px] leading-5 text-slate-500">Le lien sélectionne un dossier de la même paroisse. Pour un conjoint non inscrit, conserve le nom libre : aucun dossier ne sera inventé.</p>' +
+              '<p class="text-[11px] leading-5 text-slate-500">Le dossier concerné est celui du fidèle affiché. Le conjoint est conservé comme un nom, sans liaison avec un autre dossier.</p>' +
               '<p class="editor-feedback hidden rounded-lg p-3 text-sm" role="status"></p>' +
               '<div class="flex justify-end gap-2"><button type="button" data-cancel-editor class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600">Annuler</button><button type="submit" class="rounded-lg bg-[var(--enoria-green)] px-4 py-2 text-xs font-semibold text-white">Enregistrer l’événement</button></div></form>';
           };
@@ -1247,8 +1227,8 @@ export async function mountFaithfulProfile(
             const label = sacramentLabels[item.type] ?? item.type;
             return '<article class="rounded-xl border border-slate-200 bg-white p-4">' +
               '<div class="flex flex-wrap items-start justify-between gap-3"><div><h3 class="font-semibold text-slate-900">' + escapeHtml(label) + '</h3>' +
-              '<p class="mt-1 text-xs text-slate-500">' + escapeHtml(formatPartialDate(item.jour,item.mois,item.annee,item.precision)) + ' · Acte ' + escapeHtml(item.numero_acte ?? "—") + ' · Page ' + escapeHtml(item.page_registre ?? "—") + '</p>' +
-              '<p class="mt-1 text-xs text-slate-600">Parrain : ' + escapeHtml(item.parrain ?? "—") + ' · Marraine : ' + escapeHtml(item.marraine ?? "—") + '</p>' +
+              '<p class="mt-1 text-xs text-slate-500">' + escapeHtml(formatPartialDate(item.jour,item.mois,item.annee,item.precision)) + ' · Acte ' + escapeHtml(item.numero_acte ?? "—") + '</p>' +
+              '<p class="mt-1 text-xs text-slate-600">Parrain/marraine : ' + escapeHtml([item.parrain,item.marraine].filter((value) => Boolean(value?.trim())).join(" / ") || "—") + '</p>' +
               '<p class="mt-1 text-[11px] text-slate-500">Ministre : ' + escapeHtml(item.ministre ?? "—") + ' · Visa : ' + escapeHtml(item.visa ?? "—") + '</p></div>' +
               (canWrite ? '<button type="button" data-edit-sacrament="' + escapeHtml(id) + '" class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Modifier</button>' : "") + '</div>' +
               (canWrite ? '<div id="sacrament-editor-' + escapeHtml(id) + '" class="hidden">' + sacramentFormHtml(item) + '</div>' : "") + '</article>';
@@ -1265,8 +1245,8 @@ export async function mountFaithfulProfile(
             return '<article class="rounded-xl border border-amber-200 bg-white p-4">' +
               '<div class="flex flex-wrap items-start justify-between gap-3"><div><h3 class="font-semibold text-slate-900">' + escapeHtml(marriageLabels[item.type] ?? item.type) + '</h3>' +
               '<p class="mt-1 text-xs text-slate-500">' + escapeHtml(formatPartialDate(item.jour,item.mois,item.annee,item.precision)) + ' · ' + escapeHtml(item.lieu ?? "Lieu non renseigné") + '</p>' +
-              '<p class="mt-1 text-xs text-slate-700">Conjoint : <strong>' + escapeHtml(spouseName) + '</strong>' + (partnerId ? ' · <span class="font-semibold text-emerald-700">Dossier relié</span>' : ' · Nom libre') + '</p>' +
-              '<p class="mt-1 text-xs text-slate-500">Acte ' + escapeHtml(item.numero_acte ?? "—") + ' · Page ' + escapeHtml(item.page_registre ?? "—") + '</p>' +
+              '<p class="mt-1 text-xs text-slate-700">Conjoint : <strong>' + escapeHtml(spouseName) + '</strong></p>' +
+              '<p class="mt-1 text-xs text-slate-500">Acte ' + escapeHtml(item.numero_acte ?? "—") + '</p>' +
               '<p class="mt-1 text-[11px] text-slate-500">Baptême du conjoint : ' + escapeHtml(spouseBirth) + (item.type === "obiit_conjux" ? ' · Décès : ' + escapeHtml(spouseDeath) : "") + '</p>' +
               '<p class="mt-1 text-[11px] text-slate-500">Ministre : ' + escapeHtml(item.ministre ?? "—") + ' · Visa : ' + escapeHtml(item.visa ?? "—") + (isIncoming ? ' · Visible via le dossier matrimonial lié' : "") + '</p></div>' +
               (canWrite && !isIncoming ? '<button type="button" data-edit-marriage="' + escapeHtml(item.id) + '" class="rounded-lg border border-amber-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-amber-50">Modifier</button>' : "") + '</div>' +
@@ -1292,7 +1272,6 @@ export async function mountFaithfulProfile(
                 <div id="new-marriage-wrap" class="hidden">${canWrite && lookupsReady ? marriageFormHtml() : ""}</div>
                 <div class="mt-4 space-y-3">${marriagesHtml || '<p class="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">Aucun mariage ni lien matrimonial enregistré.</p>'}</div>
               </section>
-              <section class="page-card p-5"><h2 class="font-semibold text-slate-900">Mentions complémentaires du livret</h2><ul class="mt-3 divide-y divide-slate-100">${mentionsHtml || '<li class="py-2 text-sm text-slate-400">Aucune mention enregistrée.</li>'}</ul></section>
               ${!canWrite ? '<p class="text-xs text-slate-500">Consultation seule. L’ajout et la modification des registres sont réservés à la secrétaire et au curé.</p>' : ""}
             </div>`;
 
@@ -1321,9 +1300,6 @@ export async function mountFaithfulProfile(
             initializePartialDate(form,prefix,record ? {
               precision:record.precision,jour:record.jour,mois:record.mois,annee:record.annee
             } : null);
-            const yearSelect = form.querySelector<HTMLSelectElement>('select[name="annee_pastorale_id"]')!;
-            bindNeighborhoodCommunity(form, "quartier_id", "communaute_historique_id", communities, record?.communaute_historique_id);
-            if (!yearSelect.value) yearSelect.value = years.find((item) => item.id === activeYear?.id)?.id ?? years.find((item) => item.active)?.id ?? years[0]?.id ?? "";
             const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
             form.addEventListener("submit",async(event) => {
               event.preventDefault();
@@ -1336,18 +1312,17 @@ export async function mountFaithfulProfile(
                 if (!["bapteme","eucharistie","confirmation"].includes(type)) throw new Error("Type de sacrement invalide.");
                 const date = collectPartialDate(form,prefix);
                 const act = String(values.get("numero_acte") ?? "").trim();
-                const page = String(values.get("page_registre") ?? "").trim();
-                if (type === "bapteme" && (!act || !page)) throw new Error("Le baptême exige un numéro d’acte et une page de registre.");
+                if (type === "bapteme" && !act) throw new Error("Le numéro d’acte du baptême est obligatoire.");
                 const payload = {
-                  annee_pastorale_id:String(values.get("annee_pastorale_id") ?? ""),
-                  communaute_historique_id:String(values.get("communaute_historique_id") ?? ""),
+                  annee_pastorale_id:resolvePastoralYearId(date, years, record?.annee_pastorale_id ?? activeYear?.id),
+                  communaute_historique_id:record?.communaute_historique_id ?? faithfulRecord.communaute_id,
                   jour:date.jour, mois:date.mois, annee:date.annee, precision:date.precision,
                   lieu:String(values.get("lieu") ?? "").trim() || null,
-                  numero_acte:act || null, page_registre:page || null,
-                  reference_registre_requise:type === "bapteme" || Boolean(act && page),
+                  numero_acte:act || null, page_registre:record?.page_registre ?? null,
+                  reference_registre_requise:record?.reference_registre_requise ?? false,
                   ministre:String(values.get("ministre") ?? "").trim() || null,
-                  parrain:String(values.get("parrain") ?? "").trim() || null,
-                  marraine:String(values.get("marraine") ?? "").trim() || null,
+                  parrain:String(values.get("parrain_marraine") ?? "").trim() || null,
+                  marraine:null,
                   visa:String(values.get("visa") ?? "").trim() || null
                 };
                 const result = record
@@ -1380,17 +1355,6 @@ export async function mountFaithfulProfile(
             initializePartialDate(form,deathPrefix,record ? {
               precision:record.deces_conjoint_precision,jour:record.deces_conjoint_jour,mois:record.deces_conjoint_mois,annee:record.deces_conjoint_annee
             } : null);
-            const yearSelect = form.querySelector<HTMLSelectElement>('select[name="annee_pastorale_id"]')!;
-            const communitySelect = form.querySelector<HTMLSelectElement>('select[name="communaute_historique_id"]')!;
-            if (!yearSelect.value) yearSelect.value = years.find((item) => item.id === activeYear?.id)?.id ?? years.find((item) => item.active)?.id ?? years[0]?.id ?? "";
-            if (!communitySelect.value) communitySelect.value = communities.find((item) => item.id === faithfulRecord.communaute_id)?.id ?? communities[0]?.id ?? "";
-            const partnerSelect = form.querySelector<HTMLSelectElement>('select[name="conjoint_fidele_id"]')!;
-            const partnerNameInput = form.querySelector<HTMLInputElement>('input[name="conjoint_nom"]')!;
-            partnerSelect.addEventListener("change",() => {
-              const partner = partners.find((item) => item.id === partnerSelect.value);
-              if (partner) partnerNameInput.value = partner.prenom + " " + partner.nom;
-              else partnerNameInput.value = "";
-            });
             const deathFields = form.querySelector<HTMLFieldSetElement>("[data-spouse-death-fields]")!;
             const typeSelect = form.querySelector<HTMLSelectElement>('select[name="type"]')!;
             const syncDeathFields = (): void => { deathFields.disabled = typeSelect.value !== "obiit_conjux"; };
@@ -1408,19 +1372,15 @@ export async function mountFaithfulProfile(
                 const spouseBirth = collectPartialDate(form,baptismPrefix);
                 const spouseDeath = collectPartialDate(form,deathPrefix);
                 const act = String(values.get("numero_acte") ?? "").trim();
-                const page = String(values.get("page_registre") ?? "").trim();
-                if ((act && !page) || (!act && page)) throw new Error("Le numéro d’acte et la page doivent être renseignés ensemble.");
-                const partnerId = String(values.get("conjoint_fidele_id") ?? "") || null;
-                const partner = partnerId ? partners.find((item) => item.id === partnerId) : undefined;
-                const partnerName = String(values.get("conjoint_nom") ?? "").trim() || (partner ? partner.prenom + " " + partner.nom : "");
+                const spouseName = String(values.get("conjoint_nom") ?? "").trim();
                 const payload = {
-                  annee_pastorale_id:String(values.get("annee_pastorale_id") ?? ""),
-                  communaute_historique_id:String(values.get("communaute_historique_id") ?? ""),
+                  annee_pastorale_id:resolvePastoralYearId(date, years, record?.annee_pastorale_id ?? activeYear?.id),
+                  communaute_historique_id:record?.communaute_historique_id ?? faithfulRecord.communaute_id,
                   type:typeSelect.value as Database["public"]["Enums"]["type_evenement_matrimonial"],
                   jour:date.jour, mois:date.mois, annee:date.annee, precision:date.precision,
                   lieu:String(values.get("lieu") ?? "").trim() || null,
-                  numero_acte:act || null, page_registre:page || null,
-                  conjoint_fidele_id:partnerId, conjoint_nom:partnerName || null,
+                  numero_acte:act || null, page_registre:record?.page_registre ?? null,
+                  conjoint_fidele_id:null, conjoint_nom:spouseName || null,
                   conjoint_lieu_bapteme:String(values.get("conjoint_lieu_bapteme") ?? "").trim() || null,
                   conjoint_bapteme_jour:spouseBirth.jour, conjoint_bapteme_mois:spouseBirth.mois,
                   conjoint_bapteme_annee:spouseBirth.annee, conjoint_bapteme_precision:spouseBirth.precision,
