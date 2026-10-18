@@ -311,6 +311,13 @@ export type Database = {
             referencedRelation: "fideles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "dimes_communaute_paiement_id_fkey"
+            columns: ["communaute_paiement_id"]
+            isOneToOne: false
+            referencedRelation: "communautes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       enfants: {
