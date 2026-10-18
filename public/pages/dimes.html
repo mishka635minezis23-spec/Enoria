@@ -1,27 +1,72 @@
 <section class="space-y-6" data-dimes>
-  <header><p class="text-xs font-semibold uppercase tracking-widest text-emerald-700">Contribution paroissiale</p><h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Gestion des dîmes</h1><p id="dimes-year" class="mt-1 text-sm text-slate-500">Chargement de l'année pastorale…</p></header>
+  <header>
+    <p class="text-xs font-semibold uppercase tracking-widest text-emerald-700">Pilotage financier pastoral</p>
+    <h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Gestion des dîmes</h1>
+    <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-500">Vue de suivi et d'analyse uniquement. Les versements sont enregistrés depuis la fiche individuelle du fidèle ; aucun paiement ne s'ajoute depuis cette page.</p>
+  </header>
   <div id="dimes-feedback" class="hidden rounded-lg p-3 text-sm" role="status"></div>
-  <div class="grid gap-4 sm:grid-cols-2"><article class="page-card p-5"><p class="text-xs text-slate-500">Total en USD</p><p id="dimes-total-usd" class="mt-3 text-2xl font-semibold text-slate-800">—</p></article><article class="page-card p-5"><p class="text-xs text-slate-500">Total en FC</p><p id="dimes-total-fc" class="mt-3 text-2xl font-semibold text-slate-800">—</p></article></div>
+
   <article class="page-card p-5">
-    <h2 class="font-semibold text-slate-800">Enregistrer une contribution</h2>
-    <p class="mt-1 text-xs text-slate-500">Une seule ligne de dîme par fidèle et par année pastorale. Tu peux la modifier ou la supprimer ensuite.</p>
-    <form id="dime-form" class="mt-4 space-y-4">
-      <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <label class="block text-xs font-medium text-slate-600">Rechercher le fidèle<input id="dime-search" type="search" maxlength="80" autocomplete="off" placeholder="Tape quelques lettres du nom ou du prénom…" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" /></label>
-        <button id="dime-search-button" type="button" class="self-end rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700">Rechercher</button>
-      </div>
-      <div id="dime-search-results" class="hidden divide-y divide-slate-100 rounded-lg border border-slate-100 px-3"></div>
-      <div id="dime-selected" class="hidden rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900"></div>
-      <input id="dime-fidele-id" type="hidden" />
-      <div class="grid gap-3 sm:grid-cols-2">
-        <label class="block text-xs font-medium text-slate-600">Montant<input id="dime-amount" type="number" min="0" step="0.01" required class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" /></label>
-        <label class="block text-xs font-medium text-slate-600">Devise<select id="dime-currency" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="USD">USD</option><option value="FC">FC</option></select></label>
-      </div>
-      <label class="block text-xs font-medium text-slate-600">Observation (facultatif)<input id="dime-observation" maxlength="300" class="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm" /></label>
-      <div class="flex flex-wrap gap-2"><button id="dime-submit" type="submit" class="rounded-lg bg-[var(--enoria-green)] px-4 py-2.5 text-sm font-semibold text-white">Enregistrer la dîme</button><button id="dime-cancel-edit" type="button" class="hidden rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600">Annuler la modification</button></div>
-    </form>
+    <div class="mb-4">
+      <h2 class="font-semibold text-slate-800">Périmètre de l'analyse</h2>
+      <p class="mt-1 text-xs leading-5 text-slate-500">Choisis une année pastorale et une devise. Les sommes en USD et FC restent séparées, sans conversion entre devises.</p>
+    </div>
+    <div class="grid gap-3 sm:grid-cols-2">
+      <label class="text-xs font-medium text-slate-600">Année pastorale<select id="dimes-year-select" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="">Chargement…</option></select></label>
+      <label class="text-xs font-medium text-slate-600">Devise des graphiques<select id="dimes-currency-select" class="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"><option value="USD">Dollar américain (USD)</option><option value="FC">Franc congolais (FC)</option></select></label>
+    </div>
   </article>
-  <article class="page-card p-5"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="font-semibold text-slate-800">Contributions de l'année</h2><p id="dimes-count" class="mt-1 text-xs text-slate-500">Chargement…</p></div></div>
-    <div class="mt-4 overflow-x-auto"><table class="w-full min-w-[760px] text-left text-sm"><thead class="border-y border-slate-100 bg-slate-50 text-xs text-slate-500"><tr><th class="px-3 py-3 font-medium">Fidèle</th><th class="px-3 py-3 font-medium">Montant</th><th class="px-3 py-3 font-medium">Devise</th><th class="px-3 py-3 font-medium">Observation</th><th class="px-3 py-3 font-medium">Enregistrée le</th><th class="px-3 py-3 font-medium">Actions</th></tr></thead><tbody id="dimes-rows"><tr><td colspan="6" class="px-3 py-10 text-center text-sm text-slate-400">Chargement…</td></tr></tbody></table></div>
+
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <article class="page-card p-4"><p class="text-xs text-slate-500">Total USD · année sélectionnée</p><p id="dimes-total-usd" class="mt-2 text-2xl font-semibold text-slate-900">—</p><p class="mt-1 text-xs text-slate-400">Tous les versements enregistrés</p></article>
+    <article class="page-card p-4"><p class="text-xs text-slate-500">Total FC · année sélectionnée</p><p id="dimes-total-fc" class="mt-2 text-2xl font-semibold text-slate-900">—</p><p class="mt-1 text-xs text-slate-400">Tous les versements enregistrés</p></article>
+    <article class="page-card p-4"><p class="text-xs text-slate-500">Contributions</p><p id="dimes-contributions" class="mt-2 text-2xl font-semibold text-slate-900">—</p><p class="mt-1 text-xs text-slate-400">Lignes dans cette année pastorale</p></article>
+    <article class="page-card p-4"><p class="text-xs text-slate-500">Contributeurs distincts</p><p id="dimes-payers" class="mt-2 text-2xl font-semibold text-slate-900">—</p><p class="mt-1 text-xs text-slate-400">Fidèles ayant versé au moins une fois</p></article>
+    <article class="page-card p-4"><p class="text-xs text-slate-500">Dates à compléter</p><p id="dimes-undated" class="mt-2 text-2xl font-semibold text-slate-900">—</p><p class="mt-1 text-xs text-slate-400">Historique sans date de paiement vérifiée</p></article>
+  </div>
+
+  <div class="grid gap-4 xl:grid-cols-2">
+    <article class="page-card p-5">
+      <div class="flex flex-wrap items-start justify-between gap-2">
+        <div><h2 class="font-semibold text-slate-800">Évolution mensuelle par quartier</h2><p id="dimes-monthly-subtitle" class="mt-1 text-xs text-slate-500">Montants mensuels selon la devise sélectionnée</p></div>
+        <span class="rounded-full bg-slate-50 px-2.5 py-1 text-xs text-slate-500">Courbes comparatives</span>
+      </div>
+      <div id="dimes-monthly-chart" class="mt-4 min-h-64"></div>
+    </article>
+    <article class="page-card p-5">
+      <div><h2 class="font-semibold text-slate-800">Contributeurs par mois et quartier</h2><p class="mt-1 text-xs text-slate-500">Nombre de fidèles distincts avec versement daté</p></div>
+      <div id="dimes-payers-chart" class="mt-4 min-h-64"></div>
+    </article>
+    <article class="page-card p-5 xl:col-span-2">
+      <div class="flex flex-wrap items-start justify-between gap-2"><div><h2 class="font-semibold text-slate-800">Comparaison de la collecte par quartier</h2><p class="mt-1 text-xs text-slate-500">Total de l'année pastorale pour la devise sélectionnée</p></div><span id="dimes-comparison-unit" class="text-xs text-slate-400">—</span></div>
+      <div id="dimes-quarter-chart" class="mt-4 grid gap-4 md:grid-cols-2"></div>
+    </article>
+  </div>
+
+  <article class="page-card p-5">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div><h2 class="font-semibold text-slate-800">Les 15 derniers paiements enregistrés</h2><p class="mt-1 text-xs text-slate-500">Les noms figurent ici car cet espace est réservé au curé et à la secrétaire.</p></div>
+      <span id="dimes-recent-count" class="rounded-full bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">15 maximum</span>
+    </div>
+    <div class="mt-4 overflow-x-auto">
+      <table class="w-full min-w-[780px] text-left text-sm">
+        <thead class="border-y border-slate-100 bg-slate-50 text-xs text-slate-500"><tr>
+          <th class="px-3 py-3 font-medium">Fidèle</th><th class="px-3 py-3 font-medium">Quartier / communauté</th><th class="px-3 py-3 text-right font-medium">Montant</th><th class="px-3 py-3 font-medium">Devise</th><th class="px-3 py-3 font-medium">Date du versement</th><th class="px-3 py-3 font-medium">Année pastorale</th>
+        </tr></thead>
+        <tbody id="dimes-recent-rows"><tr><td colspan="6" class="px-3 py-10 text-center text-sm text-slate-400">Chargement…</td></tr></tbody>
+      </table>
+    </div>
   </article>
+
+  <article class="page-card p-5">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div><h2 class="font-semibold text-slate-800">Exporter la synthèse chiffrée</h2><p class="mt-1 text-xs text-slate-500">Export CSV des totaux et comparaisons, sans noms ni données personnelles.</p></div>
+      <button id="dimes-export" type="button" class="rounded-lg bg-[var(--enoria-green)] px-4 py-2.5 text-sm font-semibold text-white">Exporter les statistiques CSV</button>
+    </div>
+  </article>
+
+  <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+    <p class="text-sm font-semibold text-amber-900">Qualité et portée des données</p>
+    <p id="dimes-data-note" class="mt-1 text-xs leading-5 text-amber-800">Les anciennes contributions restent comprises dans les totaux annuels, mais elles ne seront intégrées aux courbes mensuelles que si leur date réelle de versement est connue. La date de saisie technique n'est pas confondue avec la date de paiement. Le quartier historique n'est affiché que lorsqu'il a été enregistré ; les anciennes contributions sans instantané territorial sont classées « Territoire à vérifier ».</p>
+  </div>
 </section>
