@@ -7,72 +7,54 @@
     <p class="text-xs font-semibold uppercase tracking-widest text-emerald-700">Fiche du fidèle</p>
     <div class="mt-2 flex flex-wrap items-start justify-between gap-3"><div><h1 id="profile-name" class="text-2xl font-semibold text-slate-900">Chargement…</h1><p id="profile-subtitle" class="mt-1 text-sm text-slate-500">Lecture des informations autorisées</p></div><button id="open-livret-3d" type="button" class="rounded-lg bg-[var(--enoria-green)] px-4 py-2.5 text-sm font-semibold text-white">Ouvrir le livret</button></div>
   </header>
-  <div id="livret-modal" class="livret-modal hidden" role="dialog" aria-modal="true" aria-label="Livret paroissial en plein écran">
+  <div id="livret-modal" class="livret-modal hidden" role="dialog" aria-modal="true" aria-label="Registre paroissial à deux colonnes">
     <style>
       #livret-modal, #livret-modal * { box-sizing: border-box; }
-      #livret-modal { position: fixed; inset: 0; z-index: 90; width: 100vw; height: 100dvh; overflow: hidden; background: #e4dfd0; color: #222; }
-      #livret-modal .livret-shell { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; padding: .65vh .7vw; gap: .65vh; overflow: hidden; }
-      #livret-modal .livret-toolbar { flex: 0 0 5vh; min-height: 38px; max-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 1vw; color: #f8fafc; font: 600 max(10px,1.45vh) Arial,sans-serif; }
-      #livret-modal .livret-brand { flex: 0 1 19%; min-width: 110px; line-height: 1.15; }
-      #livret-modal .livret-brand strong { display:block; font-size: 1.02em; letter-spacing:.04em; }
-      #livret-modal .livret-brand small { display:block; margin-top:.25em; color:#cbd5e1; font-size:.76em; font-weight:400; }
-      #livret-modal .livret-nav { display:flex; align-items:center; justify-content:center; flex: 1 1 auto; gap:.7vw; height:100%; min-width:0; }
-      #livret-modal .livret-nav button { flex:1 1 0; min-width:0; max-width:30vw; height:100%; padding:0 .65em; border:0; border-radius:6px; background:#ffffff24; color:#f8fafc; font:inherit; cursor:pointer; white-space:nowrap; }
-      #livret-modal .livret-nav button.on { background:#2b3fb0; color:#fff; }
-      #livret-modal #close-livret-3d { flex:0 0 auto; height:100%; padding:0 1.1em; border:1px solid #ffffff55; border-radius:6px; background:#ffffff16; color:#fff; font:inherit; cursor:pointer; }
-      #livret-modal #livret-3d-container { flex:1 1 auto; min-height:0; display:grid; grid-template-rows:minmax(0,1fr); gap:.65vh; overflow:hidden; }
-      #livret-modal .spread { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.8vw; min-width:0; min-height:0; overflow:hidden; }
-      #livret-modal #livret-3d-container[data-v="1"] #s2,
-      #livret-modal #livret-3d-container[data-v="2"] #s1 { display:none; }
-      #livret-modal #livret-3d-container[data-v="all"] { grid-template-rows:repeat(2,minmax(0,1fr)); gap:.65vh; }
-      #livret-modal #livret-3d-container[data-v="all"] .spread { gap:.55vw; }
-      #livret-modal .livret-page { --f:min(1.65vh,1.45vw); min-width:0; min-height:0; overflow:hidden; display:flex; flex-direction:column; justify-content:space-evenly; padding:1.05em 1.05em .8em; border-top:.32em solid var(--pen,#2b3fb0); border-radius:.65em; background:var(--paper,#f1eee3); color:#1d1d1d; box-shadow:0 1px 6px #0004; font:400 var(--f)/1.17 "Times New Roman",Times,serif; }
-      #livret-modal .livret-page h3 { margin:0; font-size:1.16em; line-height:1.12; letter-spacing:.03em; }
-      #livret-modal .livret-page hr { width:100%; flex:0 0 auto; margin:.25em 0; border:0; border-top:.13em solid #555; }
-      #livret-modal .livret-page .l { display:flex; gap:.38em; align-items:baseline; min-width:0; margin:.16em 0; font-size:1.12em; }
-      #livret-modal .livret-page .k { flex:0 0 auto; white-space:nowrap; }
-      #livret-modal .livret-page .v { flex:1 1 auto; min-width:0; min-height:1.2em; padding:0 .25em; border-bottom:.1em dotted #555; color:var(--pen,#2b3fb0); font:400 1.04em/1.15 "Segoe Print","Bradley Hand","Comic Sans MS",cursive; overflow-wrap:anywhere; }
-      #livret-modal .livret-page .row2 { display:flex; gap:.65em; min-width:0; }
-      #livret-modal .livret-page .row2>.l:first-child { flex:1.35 1 0; }
-      #livret-modal .livret-page .row2>.l:last-child { flex:1 1 0; }
-      #livret-modal .livret-page .stamp { align-self:flex-start; margin:.1em 0 .1em .5em; padding:.18em .55em; border:.13em solid var(--pen,#2b3fb0); border-radius:.35em; color:var(--pen,#2b3fb0); font:700 .78em Arial,sans-serif; transform:rotate(-2deg); opacity:.84; }
+      #livret-modal { position:fixed; inset:0; z-index:90; width:100vw; height:100dvh; overflow:hidden; background:#d8d5cc; color:#171717; }
+      #livret-modal .livret-shell { display:flex; flex-direction:column; width:100%; height:100%; min-height:0; padding:.8vh .8vw; gap:.8vh; overflow:hidden; }
+      #livret-modal .livret-toolbar { flex:0 0 5vh; min-height:38px; max-height:54px; display:flex; align-items:center; justify-content:space-between; gap:1vw; color:#f7f6f2; background:#454744; padding:0 1vw; border-radius:5px; font:600 max(10px,1.35vh) Arial,sans-serif; letter-spacing:.04em; }
+      #livret-modal .livret-brand strong { display:block; font-size:1.02em; letter-spacing:.08em; }
+      #livret-modal #close-livret-3d { flex:0 0 auto; height:72%; padding:0 1.1em; border:1px solid #ffffff55; border-radius:4px; background:#ffffff12; color:#fff; font:inherit; cursor:pointer; }
+      #livret-modal #livret-3d-container { flex:1 1 auto; min-height:0; display:grid; grid-template-rows:minmax(0,1fr); overflow:hidden; }
+      #livret-modal .spread { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1vw; min-width:0; min-height:0; overflow:hidden; }
+      #livret-modal .livret-page { --f:min(1.95vh,1.45vw); min-width:0; min-height:0; overflow:hidden; display:flex; flex-direction:column; padding:2.2em 2.3em; border:1px solid #aaa18e; border-radius:3px; background:var(--paper,#f4f0e5); color:#171717; box-shadow:0 2px 8px #0002; font:400 var(--f)/1.28 Georgia,"Times New Roman",serif; }
+      #livret-modal .livret-page hr { width:100%; flex:0 0 auto; margin:.42em 0; border:0; border-top:1.5px solid #282828; }
+      #livret-modal .livret-page .l { display:flex; gap:.42em; align-items:baseline; min-width:0; margin:.28em 0; font-size:1.05em; }
+      #livret-modal .livret-page .k { flex:0 0 auto; white-space:nowrap; font-weight:500; }
+      #livret-modal .livret-page .v { flex:1 1 auto; min-width:0; min-height:1.25em; padding:0 .22em; border-bottom:1px dotted #555; color:#171717; overflow-wrap:anywhere; font:400 1em/1.2 Georgia,"Times New Roman",serif; }
+      #livret-modal .livret-page .row2 { display:flex; gap:.75em; min-width:0; }
+      #livret-modal .livret-page .row2>.l { flex:1 1 0; min-width:0; }
       #livret-modal .livret-page.cover { align-items:center; justify-content:space-evenly; text-align:center; }
-      #livret-modal .livret-page.cover .v { flex:none; border:0; font-size:1.9em; font-weight:600; }
-      #livret-modal .livret-page.cover .cover-title { font:700 2.55em/1.1 Arial,sans-serif; letter-spacing:.02em; }
-      #livret-modal .livret-page.cover .cover-rdc { font:700 1.04em/1.25 "Times New Roman",serif; }
-      #livret-modal .livret-page.cover .cover-parish { font-size:1.05em; font-weight:700; }
-      #livret-modal .livret-page .dg { flex:1 1 auto; min-height:0; display:grid; grid-template-columns:.95fr 1.05fr 1fr; grid-template-rows:auto repeat(16,minmax(0,1fr)); margin-top:.35em; }
-      #livret-modal .livret-page .dg>div { min-width:0; min-height:0; display:flex; align-items:center; overflow:hidden; padding:0 .32em; border-bottom:.07em dashed #777; color:var(--pen,#2b3fb0); font:400 1.04em/1.08 "Segoe Print","Bradley Hand","Comic Sans MS",cursive; white-space:nowrap; text-overflow:ellipsis; }
-      #livret-modal .livret-page .dg>div:nth-child(3n+2),#livret-modal .livret-page .dg>div:nth-child(3n) { border-left:.08em solid #777; }
-      #livret-modal .livret-page .dg>.h { justify-content:center; border-bottom:.13em solid #555; color:#1d1d1d; font:700 1em "Times New Roman",serif; }
-      #livret-modal .livret-page .child-list { display:flex; flex:1 1 auto; flex-direction:column; justify-content:space-evenly; min-height:0; }
-      #livret-modal .livret-page .child-item { min-height:0; padding:.12em 0; border-bottom:.08em dashed #777; }
-      #livret-modal .livret-page .child-item:last-child { border-bottom:0; }
-      #livret-modal .livret-page .livret-foot { flex:0 0 auto; margin-top:.2em; padding-top:.25em; border-top:.08em solid #777; text-align:center; font-size:.72em; color:#555; }
-      #livret-modal #livret-3d-container[data-v="all"] .livret-page { --f:min(.9vh,.86vw); padding:.55em; border-radius:.35em; }
-      #livret-modal #livret-3d-container[data-v="all"] .livret-page .l { margin:.08em 0; }
-      #livret-modal #livret-3d-container[data-v="all"] .livret-page hr { margin:.12em 0; }
-      #livret-modal #livret-3d-container[data-v="all"] .livret-page.cover .cover-title { font-size:2.15em; }
-      #livret-modal .livret-rotate { display:none; position:fixed; inset:0; z-index:95; align-items:center; justify-content:center; padding:2em; background:#e4dfd0; color:#222; text-align:center; font:600 18px Arial,sans-serif; }
+      #livret-modal .cover-diocese { display:flex; flex-direction:column; align-items:center; gap:.08em; margin:.05em 0; font:700 clamp(2.3em,5.6vw,5.2em)/.98 Arial,sans-serif; letter-spacing:.055em; }
+      #livret-modal .cover-diocese span:nth-child(2) { font-size:.48em; letter-spacing:.18em; }
+      #livret-modal .cover-country { margin:.8em 0; font:700 clamp(1.05em,1.75vw,1.7em)/1.35 Georgia,"Times New Roman",serif; letter-spacing:.035em; }
+      #livret-modal .cover-rule { width:78%; margin:.65em auto; border:0; border-top:2px solid #252525; }
+      #livret-modal .cover-rule-bottom { border-top-width:1px; width:88%; }
+      #livret-modal .cover-parish-label { font:600 1.12em Arial,sans-serif; letter-spacing:.22em; }
+      #livret-modal .cover-parish { max-width:95%; margin:.25em 0; font:700 clamp(1.5em,2.45vw,2.6em)/1.18 Georgia,"Times New Roman",serif; text-transform:uppercase; overflow-wrap:anywhere; }
+      #livret-modal .identity { justify-content:flex-start; gap:.23em; }
+      #livret-modal .identity h3 { margin:0 0 .35em; text-align:center; font:700 1.38em/1.15 Georgia,"Times New Roman",serif; letter-spacing:.18em; }
+      #livret-modal .livret-section-heading { display:flex; align-items:baseline; gap:.55em; min-width:0; margin:.1em 0; font-size:1.08em; }
+      #livret-modal .livret-section-heading strong { flex:0 0 auto; white-space:nowrap; font-weight:700; letter-spacing:.025em; }
+      #livret-modal .livret-section-heading .v { font-style:italic; }
+      #livret-modal .livret-rotate { display:none; position:fixed; inset:0; z-index:95; align-items:center; justify-content:center; padding:2em; background:#d8d5cc; color:#242424; text-align:center; font:600 18px Arial,sans-serif; }
       @media (orientation:portrait) { #livret-modal .livret-rotate { display:flex; } }
-      @media (prefers-color-scheme:dark) { #livret-modal { background:#1b1a17; } #livret-modal .livret-rotate { background:#1b1a17; color:#f8fafc; } }
+      @media (max-height:650px) {
+        #livret-modal .livret-page { --f:min(1.55vh,1.15vw); padding:1.2em 1.5em; }
+        #livret-modal .livret-page .l { margin:.13em 0; }
+        #livret-modal .livret-page hr { margin:.2em 0; }
+      }
     </style>
     <div class="livret-shell">
       <header class="livret-toolbar">
-        <div class="livret-brand"><strong>LIBER MEMORIALIS</strong><small>Livret personnel du fidèle</small></div>
-        <nav id="livret-nav" class="livret-nav" aria-label="Vues du livret">
-          <button type="button" class="on" data-livret-view="1">1 · Couverture · Sacrements · Mariage</button>
-          <button type="button" data-livret-view="2">2 · Enfants · Dîmes</button>
-          <button type="button" data-livret-view="all">Tout voir</button>
-        </nav>
+        <div class="livret-brand"><strong>REGISTRE PAROISSIAL · DIOCÈSE DE GOMA</strong></div>
         <button id="close-livret-3d" type="button">Fermer ✕</button>
       </header>
       <main id="livret-3d-container" data-v="1">
         <div class="spread" id="s1"></div>
-        <div class="spread" id="s2"></div>
       </main>
     </div>
-    <div id="rot" class="livret-rotate">Tourne l'écran en mode paysage pour voir le livret sans défilement.</div>
+    <div id="rot" class="livret-rotate">Tourne l'écran en mode paysage pour afficher les deux colonnes du registre.</div>
   </div>
   <nav class="flex gap-1 overflow-x-auto border-b border-slate-200" aria-label="Onglets du dossier">
     <button type="button" class="profile-tab whitespace-nowrap border-b-2 border-emerald-700 px-4 py-3 text-sm font-semibold text-emerald-800" data-tab="general">Informations générales</button>
