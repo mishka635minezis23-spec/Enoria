@@ -670,15 +670,6 @@ async function mountPastoralAnalytics(container:HTMLElement,context:UserContext,
       ["Références d'acte incomplètes",reportNumber(missingReferences)],
       ["Dates au 01/01 à vérifier",reportNumber(suspiciousDefault)]
     ];
-    if(isClergyOrSecretary){
-      exportRows.push(
-        ["Collecte USD",usd.toLocaleString("en-US",{maximumFractionDigits:2})],
-        ["Collecte FC",fc.toLocaleString("fr-CD",{maximumFractionDigits:0})],
-        ["Contributeurs distincts",reportNumber(payerCount)],
-        ["Visas pascals enregistrés",reportNumber(signed.length)],
-        ["Duplicatas",reportNumber(selectedCertificates.length)]
-      );
-    }
   }
 
   yearSelect.addEventListener("change",render);
