@@ -252,6 +252,8 @@ export type Database = {
       dimes: {
         Row: {
           annee_pastorale_id: string
+          communaute_paiement_id: string | null
+          date_paiement: string | null
           created_at: string
           created_by: string | null
           devise: Database["public"]["Enums"]["devise_dime"]
@@ -263,6 +265,8 @@ export type Database = {
         }
         Insert: {
           annee_pastorale_id: string
+          communaute_paiement_id?: string | null
+          date_paiement?: string | null
           created_at?: string
           created_by?: string | null
           devise: Database["public"]["Enums"]["devise_dime"]
@@ -274,6 +278,8 @@ export type Database = {
         }
         Update: {
           annee_pastorale_id?: string
+          communaute_paiement_id?: string | null
+          date_paiement?: string | null
           created_at?: string
           created_by?: string | null
           devise?: Database["public"]["Enums"]["devise_dime"]
