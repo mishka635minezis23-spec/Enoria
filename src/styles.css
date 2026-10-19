@@ -1120,3 +1120,169 @@ html[data-theme="dark"] .sacrament-report-stat {
     font-size:9pt !important;
   }
 }
+
+
+/* --------------------------------------------------------------------------
+   Enoria · harmonisation Easy-O pour l'ensemble des modules
+   Couche strictement visuelle : aucun sélecteur métier ni comportement JS.
+   -------------------------------------------------------------------------- */
+:root {
+  --text-title: #0f172a;
+  --text-body: #334155;
+  --text-muted: #8a94a6;
+  --border: #edeff3;
+  --bg-page: #f5f6f8;
+  --bg-card: #fff;
+  --radius-card: 20px;
+  --radius-btn: 12px;
+  --radius-pill: 8px;
+  --shadow-card: 0 1px 2px rgba(15,23,42,.04);
+  --shadow-popover: 0 8px 24px rgba(15,23,42,.12);
+}
+body, button, input, select, textarea {
+  font-family: "Manrope", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+#page-content > section { min-width: 0; }
+#page-content section > header:not(.dashboard-heading) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin-bottom: 4px;
+}
+#page-content section > header h1,
+#page-content section > header h2 {
+  color: var(--text-title);
+  font-weight: 800;
+  letter-spacing: -.65px;
+}
+#page-content section > header h1 { font-size: clamp(23px, 2.4vw, 30px); }
+#page-content section > header > div > p:first-child,
+#page-content section > header > p:first-child {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+#page-content h2 { color: var(--text-title); font-weight: 750; letter-spacing: -.25px; }
+#page-content .page-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+#page-content .page-card > h2,
+#page-content .page-card > div > h2 { font-size: 16px; }
+#page-content label {
+  color: var(--text-body);
+  font-size: 12px;
+  font-weight: 650;
+}
+#page-content input:not([type="checkbox"]):not([type="radio"]),
+#page-content select,
+#page-content textarea {
+  min-height: 42px;
+  border: 1px solid #e5e8ee;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text-title);
+  font-size: 13px;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+#page-content input::placeholder,
+#page-content textarea::placeholder { color: var(--text-muted); }
+#page-content input:focus,
+#page-content select:focus,
+#page-content textarea:focus {
+  border-color: var(--primary);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(11,79,216,.10);
+}
+#page-content button:not(:disabled) {
+  transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+#page-content button:disabled { cursor: not-allowed; opacity: .58; }
+#page-content button[class*="bg-emerald-"],
+#page-content button[class*="bg-green-"],
+#page-content button[class*="bg-[var(--enoria-green)]"] {
+  background: var(--primary) !important;
+  color: #fff !important;
+  border-color: var(--primary) !important;
+  border-radius: var(--radius-btn);
+  box-shadow: 0 5px 12px rgba(11,79,216,.14);
+}
+#page-content button[class*="bg-emerald-"]:hover:not(:disabled),
+#page-content button[class*="bg-green-"]:hover:not(:disabled) {
+  background: var(--primary-dark) !important;
+  border-color: var(--primary-dark) !important;
+}
+#page-content button[class*="border-slate-"],
+#page-content a[class*="border-slate-"] {
+  border-color: var(--border);
+  border-radius: 10px;
+}
+#page-content table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--text-title);
+  font-size: 13px;
+}
+#page-content table thead th {
+  padding: 13px 15px;
+  background: #f6f7f9;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+}
+#page-content table thead th:first-child { border-radius: 10px 0 0 10px; }
+#page-content table thead th:last-child { border-radius: 0 10px 10px 0; }
+#page-content table tbody td {
+  padding: 14px 15px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-title);
+  vertical-align: middle;
+}
+#page-content table tbody tr { transition: background-color .18s ease; }
+#page-content table tbody tr:hover { background: #fafbfd; }
+#page-content table tbody tr:last-child td { border-bottom: 0; }
+#page-content [role="status"]:not(.hidden),
+#page-content [role="alert"]:not(.hidden) {
+  border-radius: 12px;
+  line-height: 1.6;
+}
+#page-content .text-emerald-700,
+#page-content .text-emerald-800,
+#page-content .text-green-700 { color: var(--primary) !important; }
+#page-content .focus\:border-emerald-700:focus { border-color: var(--primary) !important; }
+#page-content .focus\:ring-emerald-100:focus { --tw-ring-color: rgba(11,79,216,.12) !important; }
+#page-content .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+#page-content .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border); }
+#page-content .bg-slate-50 { background-color: #f6f7f9; }
+#page-content .text-slate-900,
+#page-content .text-slate-800 { color: var(--text-title); }
+#page-content .text-slate-600,
+#page-content .text-slate-700 { color: var(--text-body); }
+#page-content .text-slate-400,
+#page-content .text-slate-500 { color: var(--text-muted); }
+#page-content .border-slate-100,
+#page-content .border-slate-200 { border-color: var(--border); }
+#page-content .rounded-lg,
+#page-content .rounded-xl { border-radius: 12px; }
+#page-content .rounded-2xl { border-radius: 18px; }
+#page-content .overflow-x-auto { max-width: 100%; }
+.sidebar-link { min-height: 48px; font-size: 14px; }
+.sidebar-link[aria-current="page"] { border-radius: 12px; }
+.enoria-topbar { box-shadow: 0 1px 2px rgba(15,23,42,.025); }
+.enoria-topbar #signout:hover { color: var(--primary); border-color: var(--primary); background: #f3f6fd; }
+@media (max-width: 767px) {
+  #page-content section > header:not(.dashboard-heading) { align-items: flex-start; }
+  #page-content .page-card { border-radius: 16px; }
+  #page-content .overflow-x-auto table { min-width: 680px; }
+  #page-content table thead th, #page-content table tbody td { padding: 11px 12px; }
+}
